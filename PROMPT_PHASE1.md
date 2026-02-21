@@ -382,7 +382,18 @@ Discounting:
 
 Design as a simple rules/policy engine or configurable tables (keep it maintainable).
 
-### F) Taxes & Fees (configurable per organization)
+### F-1) Accounting Exports — QuickBooks + Excel + CSV
+
+The system must support multiple export formats for accounting/bookkeeping:
+
+- **QuickBooks IIF** (Intuit Interchange Format) — tab-delimited journal entry imports
+- **QuickBooks QBO** (Web Connect / OFX-based) — bank-feed-style imports
+- **Customizable CSV** — user-definable column layouts for any accounting system
+- **Excel (.xlsx)** — with configurable column selection and formatting
+
+Each organization should be able to configure which export format(s) they use and customize the column mapping for CSV exports. The system must correctly itemize: registration fees, processing/service fees, taxes (if applicable), refunds, and speaker expense payments.
+
+### F-2) Taxes & Fees (configurable per organization)
 
 - Support tax-exempt and taxable scenarios. (Sampleschool School is currently tax-exempt; all Square data shows $0 tax.)
 - Support configurable taxes (rate-based, optional per product category).
@@ -497,7 +508,7 @@ For reference, here is the complete scope. Phase 1 (this prompt) produces items 
 
 **Phase 3: Import + export + messaging**
 9. Square CSV import tool (both formats)
-10. Exports: CSV + Excel + QuickBooks-compatible
+10. Exports: CSV + Excel + QuickBooks (IIF + QBO + customizable CSV)
 11. Attendance sheets (printable HTML + PDF)
 12. Messaging: email confirmations + waitlist notifications + nudges
 
