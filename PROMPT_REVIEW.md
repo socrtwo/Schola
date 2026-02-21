@@ -24,26 +24,26 @@ All four claimed inputs exist in the repo.
 
 The following artifacts are **referenced in the prompt or DataNarrative but are NOT in the repo**. An LLM receiving this prompt will not have access to them and will have to guess or ask.
 
-### 2.1 Critical Missing Items
+### 2.1 Critical Missing Items — UPDATE: Most items now uploaded
 
-| Missing Artifact | Where Referenced | Impact |
+| Previously Missing Artifact | Status | File Uploaded |
 |---|---|---|
-| **Standalone Square CSV report file** | Prompt section H: "Must support at least one real report format found in the repo artifacts" | The `Imported Data` and `order2` sheets inside the .xlsm show imported Square data, but there is no actual `.csv` file. The LLM can infer the column structure from those sheets, but column order, encoding, header labels, and multi-row-per-order structure may differ from the raw CSV export. **Recommendation: upload at least one raw Square Orders CSV export.** |
-| **MailMerge template files** | DataNarrative page 2: "template files for the products are in the SampleschoolSchoolOrg/MergeText folder" | These Word templates with merge fields define the actual products (flyers, nudges, catalog body, intros, announcements). Without them, the LLM has no specification for what each product looks like. **Recommendation: upload at least the catalog main body template and one nudge/flyer template.** |
-| **Sample QuickBooks export format** | Prompt section E (Exports): "QuickBooks-compatible" | The prompt requires generating QuickBooks-compatible exports but provides no example of the expected format (IIF, QBO, or CSV with specific columns). **Recommendation: upload a sample QuickBooks import file or specify the exact format (e.g., IIF journal entry, QBO bank feed, or a specific CSV column layout).** |
-| **Sample attendance sheet (formatted)** | Prompt MVP: "Attendance sheets (printable HTML + PDF)" | The database has `201 Attendance Sheet` and `202 Attendance Sheet` tabs with raw data (Name, Reg'd, Address, Phone) but no formatted/printable layout. **Recommendation: upload a sample printed attendance sheet showing the desired layout.** |
-| **Paper registration form** | DataNarrative page 3: End Matter includes "Paper Registration sheets" | No sample paper registration form is in the repo. **Recommendation: upload a sample paper registration form.** |
-| **Standalone resident list CSV** | Prompt section A: "Support bulk import of resident lists (CSV/Excel)" | The `ResidentList` sheet (1,374 rows) exists inside the .xlsm but no standalone import file. The LLM could extract the format, but a real CSV sample with the expected column headers would reduce guesswork. |
+| **Standalone Square CSV report file** | **RESOLVED** | `items-2025-07-01-2025-09-01.csv` (1,687 rows, 33 cols) + `transactions-2025-07-01-2025-09-01.csv` (396 rows, 54 cols) |
+| **MailMerge template files** | **RESOLVED** | `MergeText.zip` (14 Word templates covering all product types) |
+| **Sample QuickBooks export format** | **STILL MISSING** | No sample QuickBooks import file or format specification provided. Recommend specifying IIF, QBO, or CSV column layout. |
+| **Sample attendance sheet (formatted)** | **PARTIALLY RESOLVED** | `101-125ClassList.xlsx` shows class lists (registration matrices). The `201 Attendance Sheet` / `202 Attendance Sheet` tabs in the .xlsm show the raw format. No standalone formatted/printable attendance sheet, but sufficient data to infer layout. |
+| **Paper registration form** | **RESOLVED** | `Paper registration pages.pdf` |
+| **Standalone resident list CSV** | **RESOLVED** | `Directory (13).csv` (1,216 rows, 23 columns, Windows-1252 encoding) |
 
-### 2.2 Nice-to-Have Missing Items
+### 2.2 Nice-to-Have Missing Items — UPDATE
 
-| Missing Artifact | Impact |
+| Previously Missing Artifact | Status |
 |---|---|
-| **Sample flyer, nudge email, announcement, or intro** | The DataNarrative lists ~10 product types but provides no samples of any except the catalog PDF. |
-| **"Sampleschool School Links" page** | DataNarrative page 2 says "Current read-only documentation is available at Sampleschool School Links" — this URL is not provided and would give additional workflow context. |
-| **Sample cover artwork** | DataNarrative page 3: "Semester unique Front and Back catalog covers are created by Lori Schulman" — no sample covers included. |
-| **Prior semester grid** | `2023FallGrid` exists as a sheet inside the .xlsm but is an older format (different column ordering). Having a separate clean prior grid file would help validate migration logic. |
-| **Historical registration/financial summary** | Useful for validating that import/export logic produces correct totals. |
+| **Sample flyer, nudge email, announcement, or intro** | **RESOLVED** — MailMerge templates in `MergeText.zip` define all product formats (14 templates). |
+| **"Sampleschool School Links" page** | **RESOLVED** — `SampleschoolSchoolLinks.docx` uploaded. |
+| **Sample cover artwork** | Still missing (cosmetic, not blocking). |
+| **Prior semester grid** | Still only available as embedded sheet in .xlsm. |
+| **Historical registration/financial summary** | Still missing. |
 
 ---
 
