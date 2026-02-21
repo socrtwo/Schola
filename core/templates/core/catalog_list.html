@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% block title %}Catalogs — {{ org.name }}{% endblock %}
+{% block content %}
+<h2>Catalogs</h2>
+{% for term in terms %}
+<div class="event-card">
+  <h3><a href="{% url 'core:catalog_detail' org.slug term.pk %}">{{ term.name }}</a></h3>
+  <p class="meta">{{ term.start_date }} — {{ term.end_date }}</p>
+  <p>
+    <a href="{% url 'core:catalog_pdf' org.slug term.pk %}">Download PDF</a> |
+    <a href="{% url 'core:catalog_docx' org.slug term.pk %}">Download DOCX</a>
+  </p>
+</div>
+{% empty %}
+<p>No catalogs available.</p>
+{% endfor %}
+{% endblock %}

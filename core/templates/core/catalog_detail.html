@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+{% block title %}{{ term.name }} Catalog — {{ org.name }}{% endblock %}
+{% block content %}
+<h2>{{ term.name }} Catalog</h2>
+<p class="meta">{{ event_count }} events | {{ term.start_date }} — {{ term.end_date }}</p>
+<p>
+  <a href="{% url 'core:catalog_pdf' org.slug term.pk %}">Download PDF</a> |
+  <a href="{% url 'core:catalog_docx' org.slug term.pk %}">Download DOCX</a> |
+  <a href="{% url 'core:export_mergegrid' org.slug term.pk %}">Export MergeGrid</a>
+</p>
+
+{% for cat_name, events in categories.items %}
+<h2>{{ cat_name }}</h2>
+{% for item in events %}
+<div class="event-card">
+  <h3>
+    <a href="{% url 'core:event_detail' org.slug item.event.pk %}">
+      {{ item.fields.ID }} — {{ item.fields.Title }}
+    </a>
+  </h3>
+  <p class="meta">
+    {{ item.fields.Day }}, {{ item.fields.Date }}
+    {% if item.fields.Time %}at {{ item.fields.Time }}{% endif %}
+    {% if item.fields.Venue %}— {{ item.fields.Venue }}{% endif %}
+  </p>
+  <p class="meta">
+    Speaker: {{ item.fields.Speaker }}
+    {% if item.fields.Host %}| Host: {{ item.fields.Host }}{% endif %}
+  </p>
+  {% if item.fields.Abstract %}
+  <p>{{ item.fields.Abstract|truncatewords:50 }}</p>
+  {% endif %}
+  {% if item.fields.PreFee %}
+  <p class="fee">Pre-registration: ${{ item.fields.PreFee }}
+    {% if item.fields.WalkFee %}| Walk-in: ${{ item.fields.WalkFee }}{% endif %}
+  </p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endfor %}
+
+{% if uncategorized %}
+<h2>Other Events</h2>
+{% for item in uncategorized %}
+<div class="event-card">
+  <h3>
+    <a href="{% url 'core:event_detail' org.slug item.event.pk %}">
+      {{ item.fields.ID }} — {{ item.fields.Title }}
+    </a>
+  </h3>
+  <p class="meta">{{ item.fields.Day }}, {{ item.fields.Date }}</p>
+  <p class="meta">Speaker: {{ item.fields.Speaker }}</p>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

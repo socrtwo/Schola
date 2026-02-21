@@ -1,0 +1,43 @@
+{% extends "core/base.html" %}
+{% block title %}{{ fields.Title }} — {{ org.name }}{% endblock %}
+{% block content %}
+<h2>{{ fields.ID }} — {{ fields.Title }}</h2>
+
+<div class="meta">
+  <p>{{ fields.Day }}, {{ fields.Date }}
+  {% if fields.Time %}at {{ fields.Time }}{% endif %}</p>
+  {% if fields.Venue %}<p>Venue: {{ fields.Venue }}</p>{% endif %}
+  <p>Speaker: {{ fields.Speaker }}
+  {% if fields.Host %}| Host: {{ fields.Host }}{% endif %}</p>
+</div>
+
+{% if fields.Abstract %}
+<h3>About This Event</h3>
+<p>{{ fields.Abstract }}</p>
+{% endif %}
+
+{% if fields.Profile %}
+<h3>About the Speaker</h3>
+<p><em>{{ fields.Profile }}</em></p>
+{% endif %}
+
+{% if fields.SpeakLink %}
+<p><a href="{{ fields.SpeakLink }}" target="_blank">Speaker Info</a></p>
+{% endif %}
+{% if fields.BooksLink %}
+<p><a href="{{ fields.BooksLink }}" target="_blank">Books & Resources</a></p>
+{% endif %}
+{% if fields.Vimeo %}
+<p><a href="{{ fields.Vimeo }}" target="_blank">Watch Video</a></p>
+{% endif %}
+
+{% if fields.PreFee %}
+<h3>Registration</h3>
+<p class="fee">
+  Pre-registration: ${{ fields.PreFee }}
+  {% if fields.WalkFee %}| Walk-in: ${{ fields.WalkFee }}{% endif %}
+</p>
+{% endif %}
+
+<p><a href="{% url 'core:catalog_detail' org.slug event.term.pk %}">&larr; Back to catalog</a></p>
+{% endblock %}

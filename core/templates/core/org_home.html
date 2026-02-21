@@ -1,0 +1,19 @@
+{% extends "core/base.html" %}
+{% block title %}{{ org.name }}{% endblock %}
+{% block content %}
+<h2>Welcome to {{ org.name }}</h2>
+{% if terms %}
+<h3>Terms</h3>
+<ul>
+{% for term in terms %}
+  <li>
+    <a href="{% url 'core:catalog_detail' org.slug term.pk %}">{{ term.name }}</a>
+    ({{ term.start_date }} — {{ term.end_date }})
+    {% if term.is_active %}<strong>[Active]</strong>{% endif %}
+  </li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No terms available yet.</p>
+{% endif %}
+{% endblock %}

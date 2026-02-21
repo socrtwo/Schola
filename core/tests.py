@@ -1848,3 +1848,305 @@ class MessagingTests(TestCase):
         subjects = [m["subject"] for m in self.ConsoleEmailProvider.sent_messages]
         self.assertIn("Hello Grace", subjects)
         self.assertIn("Hello Ada", subjects)
+
+
+# ===========================================================================
+# Phase 4 Tests — Catalog, Templates, Views
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Merge Field Tests
+# ---------------------------------------------------------------------------
+
+class MergeFieldTests(TestCase):
+
+    def setUp(self):
+        self.org = OrgFactory.create_org()
+        self.term = OrgFactory.create_term(self.org)
+        self.venue = Venue.objects.create(
+            organization=self.org, name="Main Hall",
+        )
+        self.event = Event.objects.create(
+            organization=self.org, term=self.term,
+            title="The Art of Diplomacy",
+            short_title="Diplomacy",
+            legacy_id="107",
+            venue=self.venue,
+            abstract="An exploration of diplomatic history.",
+            nudge_text="Don't miss this week's lecture!",
+            nudge_sequence="1st",
+            keyword="diplomacy",
+            phrase="the art of",
+            speaker_verb="is",
+            intro_text="Please welcome our speaker.",
+            speaker_link="https://example.com/speaker",
+            books_link="https://example.com/books",
+            vimeo_url="https://vimeo.com/12345",
+        )
+        self.session = EventSession.objects.create(
+            organization=self.org, event=self.event,
+            date=datetime.date(2025, 10, 6),
+            start_time=datetime.time(19, 30),
+        )
+        self.speaker_person = OrgFactory.create_person(
+            self.org, first="John", last="Smith", email="speaker@test.com",
+        )
+        from core.models import EventSpeaker
+        EventSpeaker.objects.create(
+            organization=self.org, event=self.event,
+            person=self.speaker_person, bio="Expert on diplomatic history.",
+        )
+        self.host_person = OrgFactory.create_person(
+            self.org, first="Mary", last="Host", email="host@test.com",
+        )
+        from core.models import EventHost
+        EventHost.objects.create(
+            organization=self.org, event=self.event,
+            person=self.host_person,
+        )
+        EventPrice.objects.create(
+            organization=self.org, event=self.event,
+            tier=PricingTier.objects.create(
+                organization=self.org, name="Resident", slug="resident",
+            ),
+            timing="pre", amount=Decimal("1.00"),
+        )
+        EventPrice.objects.create(
+            organization=self.org, event=self.event,
+            tier=PricingTier.objects.get(
+                organization=self.org, slug="resident",
+            ),
+            timing="walk", amount=Decimal("2.00"),
+        )
+
+    def test_standard_merge_fields(self):
+        """All 26 standard merge fields are populated."""
+        from core.catalog import get_merge_fields
+        fields = get_merge_fields(self.event)
+        self.assertEqual(fields["ID"], "107")
+        self.assertEqual(fields["Title"], "The Art of Diplomacy")
+        self.assertEqual(fields["ShortTitle"], "Diplomacy")
+        self.assertEqual(fields["Speaker"], "John Smith")
+        self.assertEqual(fields["Host"], "Mary Host")
+        self.assertEqual(fields["FirstHost"], "Mary")
+        self.assertIn("October", fields["Date"])
+        self.assertEqual(fields["Day"], "Monday")
+        self.assertIn("7:30", fields["Time"])
+        self.assertEqual(fields["Venue"], "Main Hall")
+        self.assertEqual(fields["Abstract"], "An exploration of diplomatic history.")
+        self.assertEqual(fields["Profile"], "Expert on diplomatic history.")
+        self.assertEqual(fields["PreFee"], "1.00")
+        self.assertEqual(fields["WalkFee"], "2.00")
+        self.assertEqual(fields["NudgeText"], "Don't miss this week's lecture!")
+        self.assertEqual(fields["Nudge"], "1st")
+        self.assertEqual(fields["Word"], "diplomacy")
+        self.assertEqual(fields["Phrase"], "the art of")
+        self.assertEqual(fields["IsAre"], "is")
+        self.assertEqual(fields["SpeakLink"], "https://example.com/speaker")
+        self.assertEqual(fields["BooksLink"], "https://example.com/books")
+        self.assertEqual(fields["Vimeo"], "https://vimeo.com/12345")
+        self.assertIn("107", fields["IdDayDate"])
+
+    def test_paired_merge_fields(self):
+        """x-prefixed fields are populated from paired event."""
+        from core.catalog import get_paired_merge_fields
+        xfields = get_paired_merge_fields(self.event)
+        self.assertEqual(xfields["xID"], "107")
+        self.assertEqual(xfields["xSpeaker"], "John Smith")
+        self.assertEqual(xfields["xVenue"], "Main Hall")
+        self.assertIn("xTitle", xfields)
+        self.assertIn("xDay", xfields)
+
+    def test_group_merge_fields_with_pair(self):
+        """Group merge fields include paired event's x-fields."""
+        from core.catalog import get_group_merge_fields
+        from core.models import EventGroupType, EventGroup, EventGroupMembership
+
+        # Create a paired event
+        paired = Event.objects.create(
+            organization=self.org, term=self.term,
+            title="Thursday Concert", short_title="Concert",
+            legacy_id="108", venue=self.venue,
+        )
+        EventSession.objects.create(
+            organization=self.org, event=paired,
+            date=datetime.date(2025, 10, 9),
+            start_time=datetime.time(19, 30),
+        )
+
+        gt = EventGroupType.objects.create(
+            organization=self.org, name="Nudge", slug="nudge",
+        )
+        group = EventGroup.objects.create(
+            organization=self.org, group_type=gt,
+            name="Week 1", position=1,
+        )
+        EventGroupMembership.objects.create(group=group, event=self.event, position=0)
+        EventGroupMembership.objects.create(group=group, event=paired, position=1)
+
+        fields = get_group_merge_fields(self.event)
+        self.assertEqual(fields["ID"], "107")
+        self.assertEqual(fields["xID"], "108")
+        self.assertEqual(fields["xShortTitle"], "Concert")
+
+
+# ---------------------------------------------------------------------------
+# Catalog Generation Tests
+# ---------------------------------------------------------------------------
+
+class CatalogGenerationTests(TestCase):
+
+    def setUp(self):
+        self.org = OrgFactory.create_org()
+        self.term = OrgFactory.create_term(self.org)
+        self.cat = EventCategory.objects.create(
+            organization=self.org, name="Evening Lecture", slug="evening-lecture",
+        )
+        self.event = Event.objects.create(
+            organization=self.org, term=self.term, category=self.cat,
+            title="Test Lecture", legacy_id="101",
+        )
+        EventSession.objects.create(
+            organization=self.org, event=self.event,
+            date=datetime.date(2025, 10, 6),
+            start_time=datetime.time(19, 30),
+        )
+
+    def test_catalog_context(self):
+        """get_catalog_context returns structured data."""
+        from core.catalog import get_catalog_context
+        ctx = get_catalog_context(self.org, self.term)
+        self.assertEqual(ctx["event_count"], 1)
+        self.assertIn("Evening Lecture", ctx["categories"])
+        self.assertEqual(len(ctx["categories"]["Evening Lecture"]), 1)
+
+    def test_catalog_html_generation(self):
+        """generate_catalog_html produces valid HTML."""
+        from core.catalog import generate_catalog_html
+        html = generate_catalog_html(self.org, self.term)
+        self.assertIn("Test Lecture", html)
+        self.assertIn("Evening Lecture", html)
+        self.assertIn(self.org.name, html)
+
+    def test_catalog_docx_generation(self):
+        """generate_catalog_docx produces valid DOCX bytes."""
+        from core.catalog import generate_catalog_docx
+        import io
+        data = generate_catalog_docx(self.org, self.term)
+        self.assertIsInstance(data, bytes)
+        # Verify it's a valid DOCX (zip file starting with PK)
+        self.assertTrue(data[:2] == b"PK")
+
+    def test_mergegrid_excel_export(self):
+        """MergeGrid Excel export has correct columns."""
+        from core.catalog import export_mergegrid_excel
+        import openpyxl, io
+        data = export_mergegrid_excel(self.org, self.term)
+        wb = openpyxl.load_workbook(io.BytesIO(data))
+        ws = wb.active
+        self.assertEqual(ws.title, "MergeGrid")
+        headers = [cell.value for cell in ws[1]]
+        self.assertIn("ID", headers)
+        self.assertIn("Title", headers)
+        self.assertIn("xID", headers)
+        self.assertIn("xSpeaker", headers)
+        # Data row
+        self.assertEqual(ws.cell(row=2, column=1).value, "101")
+
+    def test_template_rendering(self):
+        """render_template_for_event substitutes merge fields."""
+        from core.catalog import render_template_for_event
+        result = render_template_for_event(
+            "Event {{ ID }}: {{ Title }}",
+            self.event,
+        )
+        self.assertEqual(result, "Event 101: Test Lecture")
+
+
+# ---------------------------------------------------------------------------
+# Web View Tests
+# ---------------------------------------------------------------------------
+
+class CatalogViewTests(TestCase):
+
+    def setUp(self):
+        self.org = OrgFactory.create_org(slug="sampleschool")
+        self.term = OrgFactory.create_term(self.org)
+        self.cat = EventCategory.objects.create(
+            organization=self.org, name="Evening Lecture", slug="evening-lecture",
+        )
+        self.event = Event.objects.create(
+            organization=self.org, term=self.term, category=self.cat,
+            title="Web Lecture", legacy_id="201",
+        )
+        EventSession.objects.create(
+            organization=self.org, event=self.event,
+            date=datetime.date(2025, 10, 6),
+            start_time=datetime.time(19, 30),
+        )
+
+    def test_org_home(self):
+        """Org home page loads."""
+        resp = self.client.get(f"/{self.org.slug}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, self.org.name)
+
+    def test_catalog_list(self):
+        """Catalog list page loads."""
+        resp = self.client.get(f"/{self.org.slug}/catalog/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, self.term.name)
+
+    def test_catalog_detail(self):
+        """Catalog detail page loads with events."""
+        resp = self.client.get(f"/{self.org.slug}/catalog/{self.term.pk}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Web Lecture")
+        self.assertContains(resp, "Evening Lecture")
+
+    def test_event_detail(self):
+        """Event detail page loads."""
+        resp = self.client.get(f"/{self.org.slug}/event/{self.event.pk}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Web Lecture")
+
+    def test_catalog_docx_download(self):
+        """DOCX download returns valid content type."""
+        resp = self.client.get(f"/{self.org.slug}/catalog/{self.term.pk}/docx/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("wordprocessingml", resp["Content-Type"])
+
+    def test_mergegrid_download(self):
+        """MergeGrid Excel download works."""
+        resp = self.client.get(
+            f"/{self.org.slug}/export/mergegrid/{self.term.pk}/",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("spreadsheetml", resp["Content-Type"])
+
+    def test_registrations_csv_download(self):
+        """Registrations CSV download works."""
+        resp = self.client.get(
+            f"/{self.org.slug}/export/registrations/{self.term.pk}/csv/",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/csv")
+
+    def test_payments_iif_download(self):
+        """IIF download works."""
+        resp = self.client.get(f"/{self.org.slug}/export/payments/iif/")
+        self.assertEqual(resp.status_code, 200)
+
+    def test_attendance_html(self):
+        """Attendance sheet HTML loads."""
+        resp = self.client.get(
+            f"/{self.org.slug}/attendance/{self.event.pk}/",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Web Lecture", resp.content)
+
+    def test_404_wrong_org(self):
+        """Wrong org slug returns 404."""
+        resp = self.client.get("/nonexistent/")
+        self.assertEqual(resp.status_code, 404)
