@@ -275,7 +275,7 @@ def export_quickbooks_iif(org, start_date=None, end_date=None):
                 f"Registration Income\t{person_name}\t{-amount}\t{memo}"
             )
 
-            # Speaker fee split if linked to registrations with events that have speaker fees
+            # Speaker fee memo splits (balanced: debit Speaker Expenses, credit Registration Income)
             for reg in p.registrations.select_related("event").all():
                 speakers = reg.event.eventspeaker_set.filter(
                     fee__isnull=False, fee__gt=0,
@@ -286,6 +286,11 @@ def export_quickbooks_iif(org, start_date=None, end_date=None):
                         f"SPL\t{p.pk}\t{trns_type}\t{date_str}\t"
                         f"Speaker Expenses\t{spk.person}\t{fee}\t"
                         f"Speaker fee: {reg.event.title}"
+                    )
+                    lines.append(
+                        f"SPL\t{p.pk}\t{trns_type}\t{date_str}\t"
+                        f"Registration Income\t{spk.person}\t{-fee}\t"
+                        f"Speaker fee offset: {reg.event.title}"
                     )
 
         lines.append("ENDTRNS")

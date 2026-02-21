@@ -1,4 +1,5 @@
 """Views for the core app: public catalog, exports, attendance."""
+from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404, render
 
@@ -113,9 +114,10 @@ def event_detail(request, org_slug, event_id):
 
 
 # ---------------------------------------------------------------------------
-# Export Views (staff-only in production)
+# Export Views (staff-only)
 # ---------------------------------------------------------------------------
 
+@staff_member_required
 def export_mergegrid(request, org_slug, term_id):
     """Download MergeGrid-compatible Excel."""
     org = _get_org(org_slug)
@@ -129,6 +131,7 @@ def export_mergegrid(request, org_slug, term_id):
     return response
 
 
+@staff_member_required
 def export_registrations_csv_view(request, org_slug, term_id):
     """Download registrations as CSV."""
     org = _get_org(org_slug)
@@ -139,6 +142,7 @@ def export_registrations_csv_view(request, org_slug, term_id):
     return response
 
 
+@staff_member_required
 def export_registrations_xlsx_view(request, org_slug, term_id):
     """Download registrations as Excel."""
     org = _get_org(org_slug)
@@ -152,6 +156,7 @@ def export_registrations_xlsx_view(request, org_slug, term_id):
     return response
 
 
+@staff_member_required
 def export_payments_csv_view(request, org_slug):
     """Download payments as CSV."""
     org = _get_org(org_slug)
@@ -161,6 +166,7 @@ def export_payments_csv_view(request, org_slug):
     return response
 
 
+@staff_member_required
 def export_payments_iif_view(request, org_slug):
     """Download payments as QuickBooks IIF."""
     org = _get_org(org_slug)
@@ -170,6 +176,7 @@ def export_payments_iif_view(request, org_slug):
     return response
 
 
+@staff_member_required
 def export_payments_qbo_view(request, org_slug):
     """Download payments as QuickBooks QBO."""
     org = _get_org(org_slug)
@@ -180,9 +187,10 @@ def export_payments_qbo_view(request, org_slug):
 
 
 # ---------------------------------------------------------------------------
-# Attendance Views
+# Attendance Views (staff-only)
 # ---------------------------------------------------------------------------
 
+@staff_member_required
 def attendance_sheet_view(request, org_slug, event_id):
     """View attendance sheet as HTML."""
     org = _get_org(org_slug)
@@ -191,6 +199,7 @@ def attendance_sheet_view(request, org_slug, event_id):
     return HttpResponse(html)
 
 
+@staff_member_required
 def attendance_pdf_view(request, org_slug, event_id):
     """Download attendance sheet as PDF."""
     org = _get_org(org_slug)

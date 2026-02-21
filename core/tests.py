@@ -2071,6 +2071,7 @@ class CatalogGenerationTests(TestCase):
 class CatalogViewTests(TestCase):
 
     def setUp(self):
+        from core.models import User
         self.org = OrgFactory.create_org(slug="sampleschool")
         self.term = OrgFactory.create_term(self.org)
         self.cat = EventCategory.objects.create(
@@ -2084,6 +2085,10 @@ class CatalogViewTests(TestCase):
             organization=self.org, event=self.event,
             date=datetime.date(2025, 10, 6),
             start_time=datetime.time(19, 30),
+        )
+        # Staff user for protected views
+        self.staff_user = User.objects.create_user(
+            username="staff", password="staffpass", is_staff=True,
         )
 
     def test_org_home(self):
@@ -2119,6 +2124,7 @@ class CatalogViewTests(TestCase):
 
     def test_mergegrid_download(self):
         """MergeGrid Excel download works."""
+        self.client.login(username="staff", password="staffpass")
         resp = self.client.get(
             f"/{self.org.slug}/export/mergegrid/{self.term.pk}/",
         )
@@ -2127,6 +2133,7 @@ class CatalogViewTests(TestCase):
 
     def test_registrations_csv_download(self):
         """Registrations CSV download works."""
+        self.client.login(username="staff", password="staffpass")
         resp = self.client.get(
             f"/{self.org.slug}/export/registrations/{self.term.pk}/csv/",
         )
@@ -2135,18 +2142,365 @@ class CatalogViewTests(TestCase):
 
     def test_payments_iif_download(self):
         """IIF download works."""
+        self.client.login(username="staff", password="staffpass")
         resp = self.client.get(f"/{self.org.slug}/export/payments/iif/")
         self.assertEqual(resp.status_code, 200)
 
     def test_attendance_html(self):
         """Attendance sheet HTML loads."""
+        self.client.login(username="staff", password="staffpass")
         resp = self.client.get(
             f"/{self.org.slug}/attendance/{self.event.pk}/",
         )
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"Web Lecture", resp.content)
 
+    def test_export_requires_staff(self):
+        """Export views redirect unauthenticated users."""
+        resp = self.client.get(
+            f"/{self.org.slug}/export/mergegrid/{self.term.pk}/",
+        )
+        self.assertEqual(resp.status_code, 302)
+
     def test_404_wrong_org(self):
         """Wrong org slug returns 404."""
         resp = self.client.get("/nonexistent/")
         self.assertEqual(resp.status_code, 404)
+
+
+# ===========================================================================
+# Phase 5 Tests — Payment Processors, Security
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Payment Processor Tests
+# ---------------------------------------------------------------------------
+
+class PaymentProcessorModelTests(TestCase):
+    """Test PaymentProcessor model and admin."""
+
+    def setUp(self):
+        self.org = OrgFactory.create_org()
+
+    def test_create_square_processor(self):
+        """Create a Square payment processor."""
+        from core.models import PaymentProcessor
+        proc = PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Square Online",
+            slug="square-online",
+            processor_type="square",
+            mode="sandbox",
+            is_active=True,
+            is_primary=True,
+            credentials={
+                "app_id": "sq0idp-test",
+                "access_token": "EAAAtest",
+                "location_id": "LOCtest",
+            },
+        )
+        self.assertEqual(proc.processor_type, "square")
+        self.assertTrue(proc.is_primary)
+        self.assertIn("Square", str(proc))
+
+    def test_create_stripe_processor(self):
+        """Create a Stripe payment processor."""
+        from core.models import PaymentProcessor
+        proc = PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Stripe",
+            slug="stripe",
+            processor_type="stripe",
+            mode="sandbox",
+            is_active=True,
+            credentials={
+                "publishable_key": "pk_test_xxx",
+                "secret_key": "sk_test_xxx",
+            },
+        )
+        self.assertEqual(proc.processor_type, "stripe")
+
+    def test_create_paypal_processor(self):
+        """Create a PayPal payment processor."""
+        from core.models import PaymentProcessor
+        proc = PaymentProcessor.objects.create(
+            organization=self.org,
+            name="PayPal",
+            slug="paypal",
+            processor_type="paypal",
+            mode="sandbox",
+            credentials={
+                "client_id": "ATest",
+                "client_secret": "ESecretTest",
+            },
+        )
+        self.assertEqual(proc.processor_type, "paypal")
+
+    def test_create_custom_processor(self):
+        """Create a custom payment processor."""
+        from core.models import PaymentProcessor
+        proc = PaymentProcessor.objects.create(
+            organization=self.org,
+            name="My Custom Gateway",
+            slug="custom-gw",
+            processor_type="custom",
+            mode="production",
+            credentials={
+                "api_url": "https://gateway.example.com/api",
+                "api_key": "secret-key-123",
+            },
+            config={
+                "charge_endpoint": "/v1/charge",
+                "refund_endpoint": "/v1/refund",
+            },
+        )
+        self.assertEqual(proc.processor_type, "custom")
+        self.assertEqual(proc.mode, "production")
+
+    def test_unique_slug_per_org(self):
+        """Processor slugs must be unique per org."""
+        from core.models import PaymentProcessor
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Square 1", slug="square",
+            processor_type="square",
+        )
+        with self.assertRaises(IntegrityError):
+            PaymentProcessor.objects.create(
+                organization=self.org,
+                name="Square 2", slug="square",
+                processor_type="square",
+            )
+
+    def test_same_slug_different_orgs(self):
+        """Same slug in different orgs is allowed."""
+        from core.models import PaymentProcessor
+        org2 = OrgFactory.create_org("org-b")
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Square", slug="square",
+            processor_type="square",
+        )
+        proc2 = PaymentProcessor.objects.create(
+            organization=org2,
+            name="Square", slug="square",
+            processor_type="square",
+        )
+        self.assertEqual(proc2.slug, "square")
+
+
+class PaymentProcessorFactoryTests(TestCase):
+    """Test get_processor_for_org and related factories."""
+
+    def setUp(self):
+        self.org = OrgFactory.create_org()
+
+    def test_get_processor_returns_none_when_empty(self):
+        """Returns None when no processor is configured."""
+        from core.payment_processors import get_processor_for_org
+        result = get_processor_for_org(self.org)
+        self.assertIsNone(result)
+
+    def test_get_processor_returns_primary(self):
+        """Returns the primary active processor."""
+        from core.models import PaymentProcessor
+        from core.payment_processors import get_processor_for_org, SquareProcessor
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Square", slug="square",
+            processor_type="square",
+            mode="sandbox",
+            is_active=True,
+            is_primary=True,
+            credentials={"app_id": "x", "access_token": "y", "location_id": "z"},
+        )
+        proc = get_processor_for_org(self.org)
+        self.assertIsInstance(proc, SquareProcessor)
+        self.assertEqual(proc.mode, "sandbox")
+
+    def test_get_processor_fallback_to_any_active(self):
+        """Falls back to any active processor if none is primary."""
+        from core.models import PaymentProcessor
+        from core.payment_processors import get_processor_for_org, StripeProcessor
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Stripe", slug="stripe",
+            processor_type="stripe",
+            is_active=True,
+            is_primary=False,
+            credentials={"publishable_key": "pk", "secret_key": "sk"},
+        )
+        proc = get_processor_for_org(self.org)
+        self.assertIsInstance(proc, StripeProcessor)
+
+    def test_get_processor_by_slug(self):
+        """Get a specific processor by slug."""
+        from core.models import PaymentProcessor
+        from core.payment_processors import get_processor_by_slug, PayPalProcessor
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="PayPal", slug="paypal",
+            processor_type="paypal",
+            is_active=True,
+            credentials={"client_id": "x", "client_secret": "y"},
+        )
+        proc = get_processor_by_slug(self.org, "paypal")
+        self.assertIsInstance(proc, PayPalProcessor)
+
+    def test_get_processor_by_slug_inactive(self):
+        """Inactive processor not returned by slug lookup."""
+        from core.models import PaymentProcessor
+        from core.payment_processors import get_processor_by_slug
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="PayPal", slug="paypal",
+            processor_type="paypal",
+            is_active=False,
+            credentials={"client_id": "x", "client_secret": "y"},
+        )
+        result = get_processor_by_slug(self.org, "paypal")
+        self.assertIsNone(result)
+
+    def test_list_processors_for_org(self):
+        """List all active processors."""
+        from core.models import PaymentProcessor
+        from core.payment_processors import list_processors_for_org
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Square", slug="square",
+            processor_type="square",
+            is_active=True, is_primary=True,
+            credentials={"app_id": "x", "access_token": "y", "location_id": "z"},
+        )
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Stripe", slug="stripe",
+            processor_type="stripe",
+            is_active=True,
+            credentials={"publishable_key": "pk", "secret_key": "sk"},
+        )
+        PaymentProcessor.objects.create(
+            organization=self.org,
+            name="Inactive", slug="inactive",
+            processor_type="paypal",
+            is_active=False,
+            credentials={"client_id": "x", "client_secret": "y"},
+        )
+        result = list_processors_for_org(self.org)
+        self.assertEqual(len(result), 2)
+        # Primary should be first
+        self.assertEqual(result[0][0].slug, "square")
+
+
+class PaymentProcessorValidationTests(TestCase):
+    """Test credential validation for each processor type."""
+
+    def test_square_validate_credentials(self):
+        """Square requires app_id, access_token, location_id."""
+        from core.payment_processors import SquareProcessor
+        proc = SquareProcessor(credentials={})
+        ok, errors = proc.validate_credentials()
+        self.assertFalse(ok)
+        self.assertIn("app_id", errors[0])
+
+        proc = SquareProcessor(credentials={
+            "app_id": "x", "access_token": "y", "location_id": "z",
+        })
+        ok, errors = proc.validate_credentials()
+        self.assertTrue(ok)
+
+    def test_stripe_validate_credentials(self):
+        """Stripe requires secret_key, publishable_key."""
+        from core.payment_processors import StripeProcessor
+        proc = StripeProcessor(credentials={})
+        ok, errors = proc.validate_credentials()
+        self.assertFalse(ok)
+
+        proc = StripeProcessor(credentials={
+            "publishable_key": "pk_test", "secret_key": "sk_test",
+        })
+        ok, errors = proc.validate_credentials()
+        self.assertTrue(ok)
+
+    def test_paypal_validate_credentials(self):
+        """PayPal requires client_id, client_secret."""
+        from core.payment_processors import PayPalProcessor
+        proc = PayPalProcessor(credentials={})
+        ok, errors = proc.validate_credentials()
+        self.assertFalse(ok)
+
+        proc = PayPalProcessor(credentials={
+            "client_id": "x", "client_secret": "y",
+        })
+        ok, errors = proc.validate_credentials()
+        self.assertTrue(ok)
+
+    def test_custom_validate_credentials(self):
+        """Custom requires api_url, api_key."""
+        from core.payment_processors import CustomProcessor
+        proc = CustomProcessor(credentials={})
+        ok, errors = proc.validate_credentials()
+        self.assertFalse(ok)
+
+        proc = CustomProcessor(credentials={
+            "api_url": "https://example.com", "api_key": "key123",
+        })
+        ok, errors = proc.validate_credentials()
+        self.assertTrue(ok)
+
+    def test_square_sandbox_url(self):
+        """Square uses sandbox URL in sandbox mode."""
+        from core.payment_processors import SquareProcessor
+        proc = SquareProcessor(mode="sandbox")
+        self.assertIn("sandbox", proc._base_url)
+
+    def test_square_production_url(self):
+        """Square uses production URL in production mode."""
+        from core.payment_processors import SquareProcessor
+        proc = SquareProcessor(mode="production")
+        self.assertNotIn("sandbox", proc._base_url)
+
+    def test_paypal_sandbox_url(self):
+        """PayPal uses sandbox URL in sandbox mode."""
+        from core.payment_processors import PayPalProcessor
+        proc = PayPalProcessor(mode="sandbox")
+        self.assertIn("sandbox", proc._base_url)
+
+    def test_charge_without_credentials_fails(self):
+        """Charge with missing credentials returns error result."""
+        from core.payment_processors import SquareProcessor
+        proc = SquareProcessor(credentials={})
+        result = proc.charge(Decimal("10.00"))
+        self.assertFalse(result.success)
+        self.assertIn("Missing", result.error)
+
+    def test_checkout_without_credentials_fails(self):
+        """Checkout with missing credentials returns error result."""
+        from core.payment_processors import StripeProcessor
+        proc = StripeProcessor(credentials={})
+        result = proc.create_checkout(Decimal("25.00"))
+        self.assertFalse(result.success)
+
+    def test_refund_without_credentials_fails(self):
+        """Refund with missing credentials returns error result."""
+        from core.payment_processors import PayPalProcessor
+        proc = PayPalProcessor(credentials={})
+        result = proc.refund("txn-123")
+        self.assertFalse(result.success)
+
+
+class PaymentProcessorAdminTests(TestCase):
+    """Test PaymentProcessor admin registration."""
+
+    def setUp(self):
+        from core.models import User
+        self.user = User.objects.create_superuser(
+            username="admin2", email="admin2@test.com", password="pass",
+        )
+        self.client.login(username="admin2", password="pass")
+
+    def test_payment_processor_changelist_loads(self):
+        """PaymentProcessor changelist loads."""
+        resp = self.client.get("/admin/core/paymentprocessor/")
+        self.assertEqual(resp.status_code, 200)

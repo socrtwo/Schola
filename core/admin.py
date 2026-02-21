@@ -19,6 +19,7 @@ from .models import (
     Household,
     Organization,
     Payment,
+    PaymentProcessor,
     Person,
     PersonRole,
     PricingTier,
@@ -51,6 +52,30 @@ class OrganizationAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "contact_email", "is_tax_exempt", "created_at")
     prepopulated_fields = {"slug": ("name",)}
     search_fields = ("name", "slug")
+    fieldsets = (
+        (None, {
+            "fields": (
+                "name", "slug", "contact_email", "contact_phone",
+                "address", "logo_url", "timezone",
+            ),
+        }),
+        ("Financials", {
+            "fields": (
+                "is_tax_exempt", "tax_rate",
+                "processing_fee_percent", "processing_fee_fixed",
+            ),
+        }),
+        ("Square (Legacy — use Payment Processors instead)", {
+            "fields": (
+                "square_app_id", "square_access_token",
+                "square_location_id", "square_environment",
+            ),
+            "classes": ("collapse",),
+        }),
+        ("Email Provider", {
+            "fields": ("email_provider", "email_config"),
+        }),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -294,9 +319,49 @@ class PaymentAdmin(OrgScopedMixin, admin.ModelAdmin):
         "person", "amount", "method", "paid_at", "is_refund", "organization",
     )
     list_filter = ("organization", "method", "is_refund")
-    search_fields = ("person__first_name", "person__last_name", "square_transaction_id")
+    search_fields = (
+        "person__first_name", "person__last_name",
+        "square_transaction_id", "processor_transaction_id",
+    )
     raw_id_fields = ("person",)
     filter_horizontal = ("registrations",)
+
+
+# ---------------------------------------------------------------------------
+# Payment Processors
+# ---------------------------------------------------------------------------
+
+@admin.register(PaymentProcessor)
+class PaymentProcessorAdmin(OrgScopedMixin, admin.ModelAdmin):
+    list_display = (
+        "name", "processor_type", "mode", "is_active", "is_primary", "organization",
+    )
+    list_filter = ("organization", "processor_type", "mode", "is_active", "is_primary")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+    fieldsets = (
+        (None, {
+            "fields": (
+                "organization", "name", "slug",
+                "processor_type", "mode", "is_active", "is_primary",
+            ),
+        }),
+        ("Credentials", {
+            "fields": ("credentials",),
+            "description": (
+                "Processor-specific credentials as JSON. "
+                "Square: {\"app_id\": \"...\", \"access_token\": \"...\", \"location_id\": \"...\"}. "
+                "Stripe: {\"publishable_key\": \"...\", \"secret_key\": \"...\", \"webhook_secret\": \"...\"}. "
+                "PayPal: {\"client_id\": \"...\", \"client_secret\": \"...\"}. "
+                "Custom: {\"api_url\": \"...\", \"api_key\": \"...\"}."
+            ),
+        }),
+        ("Configuration", {
+            "fields": ("config",),
+            "classes": ("collapse",),
+            "description": "Optional processor-specific settings as JSON.",
+        }),
+    )
 
 
 # ---------------------------------------------------------------------------

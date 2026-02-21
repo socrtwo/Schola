@@ -708,13 +708,26 @@ class Payment(OrgScoped):
     METHOD_CHOICES = [
         ("square_checkout", "Square Hosted Checkout"),
         ("square_api", "Square Direct API"),
+        ("stripe_checkout", "Stripe Checkout"),
+        ("stripe_api", "Stripe Direct API"),
+        ("paypal", "PayPal"),
         ("check", "Check"),
         ("cash", "Cash"),
-        ("imported", "Imported from Square CSV"),
+        ("imported", "Imported from CSV"),
+        ("other", "Other"),
     ]
-    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="payments")
+    person = models.ForeignKey(
+        Person, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="payments",
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    method = models.CharField(max_length=20, choices=METHOD_CHOICES)
+    method = models.CharField(max_length=30, choices=METHOD_CHOICES)
+    processor_transaction_id = models.CharField(
+        max_length=200, blank=True, db_index=True,
+        help_text="Transaction ID from the payment processor",
+    )
+    processor_payment_id = models.CharField(max_length=200, blank=True)
+    # Legacy Square-specific fields kept as aliases
     square_transaction_id = models.CharField(max_length=200, blank=True, db_index=True)
     square_payment_id = models.CharField(max_length=200, blank=True)
     check_number = models.CharField(max_length=50, blank=True)
@@ -730,11 +743,13 @@ class Payment(OrgScoped):
     class Meta:
         indexes = [
             models.Index(fields=["organization", "square_transaction_id"]),
+            models.Index(fields=["organization", "processor_transaction_id"]),
         ]
 
     def __str__(self):
         prefix = "Refund" if self.is_refund else "Payment"
-        return f"{prefix} ${self.amount} by {self.person} via {self.method}"
+        person_str = str(self.person) if self.person else "Unknown"
+        return f"{prefix} ${self.amount} by {person_str} via {self.method}"
 
 
 class Attendance(OrgScoped):
@@ -754,3 +769,72 @@ class Attendance(OrgScoped):
                 name="unique_attendance_per_reg_session",
             ),
         ]
+
+
+# ---------------------------------------------------------------------------
+# Payment Processors
+# ---------------------------------------------------------------------------
+
+class PaymentProcessor(OrgScoped):
+    """Configurable payment processor per organization.
+
+    Supports multiple processors: Square, Stripe, PayPal, or custom.
+    Each org can have multiple processors (e.g., Square for online, cash for
+    in-person) but only one active primary.
+    """
+    PROCESSOR_CHOICES = [
+        ("square", "Square"),
+        ("stripe", "Stripe"),
+        ("paypal", "PayPal"),
+        ("custom", "Custom"),
+    ]
+    MODE_CHOICES = [
+        ("sandbox", "Sandbox / Test"),
+        ("production", "Production / Live"),
+    ]
+
+    name = models.CharField(max_length=200, help_text="Display name, e.g. 'Square Online'")
+    slug = models.SlugField(max_length=100)
+    processor_type = models.CharField(max_length=20, choices=PROCESSOR_CHOICES)
+    mode = models.CharField(max_length=20, choices=MODE_CHOICES, default="sandbox")
+    is_active = models.BooleanField(default=True)
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Primary processor used for new online payments",
+    )
+
+    # Credentials (stored as JSON for flexibility across processors)
+    credentials = models.JSONField(
+        default=dict, blank=True,
+        help_text=(
+            "Processor-specific credentials. "
+            "Square: {app_id, access_token, location_id}. "
+            "Stripe: {publishable_key, secret_key, webhook_secret}. "
+            "PayPal: {client_id, client_secret}. "
+            "Custom: {api_url, api_key, ...}."
+        ),
+    )
+
+    # Processor-specific config (non-credential settings)
+    config = models.JSONField(
+        default=dict, blank=True,
+        help_text=(
+            "Processor-specific settings. "
+            "E.g., {currency: 'USD', capture_method: 'automatic', "
+            "webhook_url: '...', return_url: '...'}."
+        ),
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "slug"],
+                name="unique_processor_slug_per_org",
+            ),
+        ]
+        ordering = ["-is_primary", "name"]
+
+    def __str__(self):
+        status = "active" if self.is_active else "inactive"
+        primary = " [PRIMARY]" if self.is_primary else ""
+        return f"{self.name} ({self.get_processor_type_display()}, {self.mode}){primary} [{status}]"
