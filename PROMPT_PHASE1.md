@@ -168,9 +168,13 @@ The grid has 13 additional columns prefixed with `x`:
 | `xPhrase` | Thursday event's phrase |
 | `xNudgeText` | Thursday event's nudge text |
 
-**How this works:** Sampleschool School runs evening events on Mondays and Thursdays. For products that advertise two events together (nudge emails, combined flyers, closing announcements), the Monday event row carries the corresponding Thursday event's data in the x-columns. This is a denormalized pattern from the Excel/MailMerge system.
+**How this works (Sampleschool School example):** Sampleschool School runs evening events on Mondays and Thursdays. For products that advertise two events together (nudge emails, combined flyers, closing announcements), the Monday event row carries the corresponding Thursday event's data in the x-columns. This is a denormalized pattern from the Excel/MailMerge system.
 
-In the new system, this should be modeled as an **event pairing/grouping relationship** rather than denormalized columns. The template rendering system should be able to reference paired events without requiring x-columns.
+**In the new system**, this should be modeled as a **generic event grouping relationship** rather than denormalized columns. The grouping mechanism must support:
+- Any number of events per group (not limited to pairs)
+- Events on any days/times (not limited to Monday+Thursday)
+- Multiple grouping types per org (e.g., "nudge group", "flyer group", "catalog section")
+The template rendering system should be able to reference grouped events without requiring x-columns. Sampleschool School's Monday/Thursday pairing is just one configuration of this general capability.
 
 ### C. MailMerge Template Inventory
 
@@ -349,8 +353,10 @@ Requirements:
 - Event lifecycle states must support the configurable workflow described above. Default states: Draft → Tentative → Booked → Published → Archived.
 - **Event type/category field** (required for bundle classification): e.g., "Evening Lecture", "Evening Performance (Music/Drama/Dance)", "Daytime Class". Configurable per org.
 - Venues/rooms, scheduling (date/time), and seat capacity.
+- **Flexible scheduling**: Events may be held on any day(s) of the week, at any time(s), on regular or irregular intervals. The system must not hard-code any particular day/time pattern. Sampleschool School's Monday/Thursday 7:30–8:30 PM pattern is just one example configuration.
+- Support for multi-session events (e.g., a day class meeting every Friday for 12 weeks) with a single registration covering all sessions.
 - Instructor/speaker and host relationships (distinct roles).
-- **Event pairing** — support grouping events (e.g., Monday + Thursday pairs for nudges and combined flyers) as a relationship, not as denormalized columns.
+- **Event pairing/grouping** — support arbitrary grouping of events (e.g., Monday + Thursday pairs for nudges and combined flyers) as a configurable relationship, not as denormalized columns. Groupings should not be limited to two events or to specific days.
 
 ### D) Registration + Pricing Tiers
 
@@ -368,12 +374,14 @@ Requirements:
 
 Support bundles and discount rules even if some orgs disable them.
 
-Bundle types are **configurable per organization**. For Sampleschool School, the bundles are:
-- All evening events (all courses in the 100-series)
+Bundles are **fully configurable per organization**. A bundle can include any combination of offerings — by event type/category, by schedule pattern, by tag, or by arbitrary manual selection. Bundles are not limited to events on specific days or at specific times.
+
+For Sampleschool School, the current bundles are:
+- All evening events (all courses in the 100-series, held Mondays and Thursdays 7:30 PM)
 - Evening lectures only (events categorized as "Evening Lecture")
 - Evening performances only (events categorized as "Evening Performance (Music/Drama/Dance)")
 
-Custom bundle definitions should be supported (arbitrary grouping by event type/category).
+Other organizations might bundle all Saturday workshops, all events in a topic area, a pick-any-5 package, etc. The bundle definition system must be flexible enough to support these patterns.
 
 Discounting:
 - Allow percentage or fixed discounts
