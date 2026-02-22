@@ -1,0 +1,45 @@
+version: "3.8"
+
+# Production docker-compose overlay.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    restart: always
+
+  web:
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn schola.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
+    volumes:
+      - static_files:/app/staticfiles
+    environment:
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME:-schola}
+      - DB_USER=${DB_USER:-schola}
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+      - DJANGO_DEBUG=false
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost}
+      - STATIC_ROOT=/app/staticfiles
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - static_files:/usr/share/nginx/html/static:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  pgdata:
+  static_files:

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Schola
+Comment=Continuing Education Registration System
+Exec=Schola
+Icon=schola
+Terminal=false
+Categories=Education;Office;

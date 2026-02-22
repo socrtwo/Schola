@@ -1,8 +1,14 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0066cc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Schola">
+<link rel="manifest" href="{% static 'core/manifest.json' %}">
+<link rel="apple-touch-icon" href="{% static 'core/icon-192.png' %}">
 <title>{% block title %}{{ org.name }}{% endblock %}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,5 +46,11 @@
 <footer>
   &copy; {{ org.name }}. Powered by Schola.
 </footer>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("{% static 'core/sw.js' %}")
+    .catch(function() {});
+}
+</script>
 </body>
 </html>
