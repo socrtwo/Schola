@@ -1,0 +1,26 @@
+{
+  "packageId": "org.schola.twa",
+  "host": "localhost:8000",
+  "name": "Schola",
+  "launcherName": "Schola",
+  "display": "standalone",
+  "themeColor": "#0066cc",
+  "navigationColor": "#000000",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "../core/static/core/icon-512.png",
+  "maskableIconUrl": "../core/static/core/icon-512.png",
+  "shortcuts": [],
+  "signingKey": {
+    "path": "android.keystore",
+    "alias": "schola"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "splashScreenFadeOutDuration": 300,
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "orientation": "default",
+  "fingerprints": []
+}

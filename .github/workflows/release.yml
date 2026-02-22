@@ -1,0 +1,371 @@
+# Schola — Build & Release Workflow
+# Builds distributable artifacts for all supported platforms.
+#
+# Trigger: push a version tag (v1.0.0) or manually via workflow_dispatch.
+# Produces: Windows .exe installer, macOS .dmg, Linux .deb/.rpm,
+#           Android .apk (TWA), Docker image, pip wheel.
+
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g. 1.0.0)"
+        required: false
+        default: "0.0.0-dev"
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  PYTHON_VERSION: "3.12"
+  APP_NAME: "Schola"
+  APP_VERSION: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────
+  # Run tests first — all platforms share this gate
+  # ──────────────────────────────────────────────────────────────────
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 \
+            libffi-dev libcairo2 libglib2.0-0 shared-mime-info
+          pip install -r requirements.txt
+      - name: Run tests
+        run: python manage.py test core -v2
+
+  # ──────────────────────────────────────────────────────────────────
+  # Windows: PyInstaller .exe + NSIS installer
+  # ──────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows Installer (.exe)
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller schola.spec --noconfirm
+
+      - name: Create NSIS installer
+        uses: joncloud/makensis-action@v4
+        with:
+          script-file: installer/windows/schola.nsi
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-Windows-Installer
+          path: installer/windows/Schola-Setup-*.exe
+
+      - name: Upload portable Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-Windows-Portable
+          path: dist/Schola/
+
+  # ──────────────────────────────────────────────────────────────────
+  # macOS: PyInstaller .app + .dmg disk image
+  # ──────────────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS Disk Image (.dmg)
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          brew install pango libffi cairo glib gdk-pixbuf shared-mime-info
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller schola.spec --noconfirm
+
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "Schola" \
+            --volicon "core/static/core/icon-512.png" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "Schola.app" 150 190 \
+            --app-drop-link 450 190 \
+            "Schola-macOS.dmg" \
+            "dist/Schola.app" || true
+          # Fallback: simple dmg if create-dmg fails
+          if [ ! -f Schola-macOS.dmg ]; then
+            hdiutil create -volname "Schola" -srcfolder dist/Schola.app \
+              -ov -format UDZO Schola-macOS.dmg
+          fi
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-macOS-DMG
+          path: Schola-macOS.dmg
+
+  # ──────────────────────────────────────────────────────────────────
+  # Linux: PyInstaller binary + .deb + .rpm packages
+  # ──────────────────────────────────────────────────────────────────
+  build-linux:
+    name: Linux Packages (.deb, .rpm)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 \
+            libffi-dev libcairo2 libglib2.0-0 shared-mime-info \
+            ruby ruby-dev build-essential rpm
+          sudo gem install fpm
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller schola.spec --noconfirm
+
+      - name: Prepare package structure
+        run: |
+          mkdir -p pkg/opt/schola
+          mkdir -p pkg/usr/share/applications
+          mkdir -p pkg/usr/local/bin
+          cp -r dist/Schola/* pkg/opt/schola/
+          cp scripts/schola.desktop pkg/usr/share/applications/
+          # Symlink for PATH
+          ln -sf /opt/schola/Schola pkg/usr/local/bin/schola
+
+      - name: Build .deb package
+        run: |
+          VERSION=$(echo "${{ env.APP_VERSION }}" | sed 's/^v//')
+          fpm -s dir -t deb \
+            --name schola \
+            --version "${VERSION:-1.0.0}" \
+            --description "Continuing education registration and administration system" \
+            --url "https://github.com/schola-project/schola" \
+            --license MIT \
+            --maintainer "Schola Contributors" \
+            --depends "libpango-1.0-0" \
+            --depends "libcairo2" \
+            --depends "libgdk-pixbuf2.0-0" \
+            -C pkg \
+            .
+          mv *.deb schola-linux-amd64.deb
+
+      - name: Build .rpm package
+        run: |
+          VERSION=$(echo "${{ env.APP_VERSION }}" | sed 's/^v//')
+          fpm -s dir -t rpm \
+            --name schola \
+            --version "${VERSION:-1.0.0}" \
+            --description "Continuing education registration and administration system" \
+            --url "https://github.com/schola-project/schola" \
+            --license MIT \
+            --maintainer "Schola Contributors" \
+            --depends "pango" \
+            --depends "cairo" \
+            --depends "gdk-pixbuf2" \
+            -C pkg \
+            .
+          mv *.rpm schola-linux-x86_64.rpm
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-Linux-DEB
+          path: schola-linux-amd64.deb
+
+      - name: Upload .rpm
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-Linux-RPM
+          path: schola-linux-x86_64.rpm
+
+      - name: Upload portable Linux build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-Linux-Portable
+          path: dist/Schola/
+
+  # ──────────────────────────────────────────────────────────────────
+  # Android: Trusted Web Activity (TWA) wrapping the PWA → .apk
+  # ──────────────────────────────────────────────────────────────────
+  build-android:
+    name: Android APK (.apk)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Node.js (for Bubblewrap)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Generate TWA project
+        run: |
+          cd android-twa
+          bubblewrap init \
+            --manifest="twa-manifest.json" \
+            --directory=build
+        continue-on-error: true
+
+      - name: Build APK
+        run: |
+          cd android-twa/build
+          bubblewrap build \
+            --skipPwaValidation
+        continue-on-error: true
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Schola-Android-APK
+          path: android-twa/build/app-release-unsigned.apk
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────────────────────────
+  # Python wheel + Docker image
+  # ──────────────────────────────────────────────────────────────────
+  build-web:
+    name: Web (Docker + pip wheel)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build pip wheel
+        run: |
+          pip install build
+          python -m build
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-pip-wheel
+          path: dist/schola-*.whl
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schola-pip-sdist
+          path: dist/schola-*.tar.gz
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ env.APP_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ──────────────────────────────────────────────────────────────────
+  # Create GitHub Release with all artifacts
+  # ──────────────────────────────────────────────────────────────────
+  release:
+    name: Create Release
+    needs: [build-windows, build-macos, build-linux, build-android, build-web]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: List artifacts
+        run: find artifacts/ -type f | head -50
+
+      - name: Package portable builds
+        run: |
+          cd artifacts
+          # Zip Windows portable
+          if [ -d "Schola-Windows-Portable" ]; then
+            (cd Schola-Windows-Portable && zip -r ../Schola-Windows-Portable.zip .)
+          fi
+          # Tar Linux portable
+          if [ -d "Schola-Linux-Portable" ]; then
+            (cd Schola-Linux-Portable && tar czf ../Schola-Linux-Portable.tar.gz .)
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/Schola-Windows-Installer/*.exe
+            artifacts/Schola-Windows-Portable.zip
+            artifacts/Schola-macOS-DMG/*.dmg
+            artifacts/Schola-Linux-DEB/*.deb
+            artifacts/Schola-Linux-RPM/*.rpm
+            artifacts/Schola-Linux-Portable.tar.gz
+            artifacts/Schola-Android-APK/*.apk
+            artifacts/Schola-pip-wheel/*.whl
+            artifacts/Schola-pip-sdist/*.tar.gz

@@ -1,0 +1,40 @@
+# Schola — Continuous Integration
+# Runs tests on every push and pull request.
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system dependencies (WeasyPrint)
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 \
+            libffi-dev libcairo2 libglib2.0-0 shared-mime-info
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python manage.py test core -v2
+
+      - name: Check migrations
+        run: python manage.py makemigrations --check --dry-run
