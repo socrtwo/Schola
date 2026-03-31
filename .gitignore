@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+release/
+
+# Capacitor generated (re-generate with: npx cap add android/ios)
+android/
+ios/
+
+# Electron cache
+.electron-builder/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Keystore (never commit signing keys)
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
