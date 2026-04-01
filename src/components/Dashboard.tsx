@@ -44,7 +44,7 @@ export default function Dashboard() {
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">Sampleschool School – Fall 2025 Overview</p>
+        <p className="text-gray-500 text-sm mt-1">Fall 2025 Overview</p>
       </div>
 
       {/* Stat cards */}

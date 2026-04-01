@@ -51,7 +51,7 @@ export default function Navigation({ isOpen, onClose }: Props) {
             </div>
             <div>
               <div className="text-white font-bold text-lg leading-none">Schola</div>
-              <div className="text-blue-300 text-xs mt-0.5">Sampleschool School</div>
+              <div className="text-blue-300 text-xs mt-0.5">Continuing Education</div>
             </div>
           </div>
           <button
@@ -86,7 +86,7 @@ export default function Navigation({ isOpen, onClose }: Props) {
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/10">
           <p className="text-gray-500 text-xs">
-            © 2026 Paul D Pruitt
+            © 2026 Schola Contributors
           </p>
           <p className="text-gray-600 text-xs mt-0.5">v1.0.0</p>
         </div>

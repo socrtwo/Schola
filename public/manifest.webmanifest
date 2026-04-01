@@ -1,7 +1,7 @@
 {
   "name": "Schola – Continuing Education",
   "short_name": "Schola",
-  "description": "Administration system for Sampleschool School continuing education programs",
+  "description": "Administration system for continuing education programs",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

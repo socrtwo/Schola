@@ -1,10 +1,9 @@
 {
   "name": "schola",
   "version": "1.0.0",
-  "description": "Schola – Continuing Education Administration for Sampleschool School",
+  "description": "Schola – Continuing Education Administration System",
   "author": {
-    "name": "Paul D Pruitt",
-    "email": "socrtwo@s2services.com"
+    "name": "Schola Contributors"
   },
   "private": true,
   "type": "module",
@@ -56,7 +55,7 @@
   "build": {
     "appId": "com.scholaapp.schola",
     "productName": "Schola",
-    "copyright": "Copyright © 2026 Paul D Pruitt",
+    "copyright": "Copyright © 2026 Schola Contributors",
     "directories": {
       "buildResources": "electron/resources",
       "output": "release"

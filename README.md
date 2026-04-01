@@ -67,4 +67,4 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ## Credits 🙏
 
-Developed by Paul Pruitt (socrtwo)
+Developed by the Schola Contributors
