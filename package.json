@@ -2,6 +2,10 @@
   "name": "schola",
   "version": "1.0.0",
   "description": "Schola – Continuing Education Administration for Sampleschool School",
+  "author": {
+    "name": "Paul D Pruitt",
+    "email": "admin@scholaapp.com"
+  },
   "private": true,
   "type": "module",
   "scripts": {
