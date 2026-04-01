@@ -1,0 +1,97 @@
+{
+  "name": "schola",
+  "version": "1.0.0",
+  "description": "Schola – Continuing Education Administration for Sampleschool School",
+  "author": {
+    "name": "Paul D Pruitt",
+    "email": "socrtwo@s2services.com"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+
+    "build:web": "npm run build",
+
+    "cap:init": "cap init Schola com.scholaapp.schola --web-dir dist",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "cap:sync": "cap sync",
+    "build:android": "npm run build && cap sync android",
+    "build:ios": "npm run build && cap sync ios",
+
+    "electron:dev": "npm run build && electron electron/main.cjs",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:linux": "npm run build && electron-builder --linux"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.3",
+    "papaparse": "^5.4.1",
+    "recharts": "^2.12.2",
+    "lucide-react": "^0.378.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.4.5",
+    "vite": "^5.3.1",
+    "vite-plugin-pwa": "^0.20.1"
+  },
+  "build": {
+    "appId": "com.scholaapp.schola",
+    "productName": "Schola",
+    "copyright": "Copyright © 2026 Paul D Pruitt",
+    "directories": {
+      "buildResources": "electron/resources",
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/main.cjs",
+      "electron/preload.cjs"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
+      ],
+      "icon": "electron/resources/icon.icns"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "electron/resources/icon.ico"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] },
+        { "target": "rpm", "arch": ["x64"] }
+      ],
+      "icon": "electron/resources/icons",
+      "category": "Education"
+    }
+  }
+}
