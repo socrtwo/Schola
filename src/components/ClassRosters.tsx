@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { CheckSquare, Square, Download } from 'lucide-react';
-import { courses, students } from '../data/sampleData';
+import { students } from '../data/sampleData';
+import { useOfferings } from '../utils/offerings';
 
 export default function ClassRosters() {
+  const courses = useOfferings();
   const [selectedCourse, setSelectedCourse] = useState(courses[0].id);
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
 

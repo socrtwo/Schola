@@ -5,11 +5,14 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { Users, BookOpen, DollarSign, TrendingUp, ArrowRight, UserPlus } from 'lucide-react';
-import { students, courses, transactions } from '../data/sampleData';
+import { students, transactions } from '../data/sampleData';
+import { useOfferings } from '../utils/offerings';
 
 const COLORS = ['#2563eb', '#d97706', '#10b981', '#f43f5e', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
 export default function Dashboard() {
+  const courses = useOfferings();
+
   const totalRevenue = useMemo(
     () => transactions.reduce((sum, t) => sum + t.amount, 0),
     [],
@@ -19,7 +22,7 @@ export default function Dashboard() {
     const map: Record<string, number> = {};
     courses.forEach(c => { map[c.category] = (map[c.category] ?? 0) + c.enrolled; });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
-  }, []);
+  }, [courses]);
 
   const revenueByCategory = useMemo(() => {
     const map: Record<string, number> = {};
@@ -29,12 +32,12 @@ export default function Dashboard() {
 
   const totalEnrolled = useMemo(
     () => courses.reduce((sum, c) => sum + c.enrolled, 0),
-    [],
+    [courses],
   );
 
   const totalCapacity = useMemo(
     () => courses.reduce((sum, c) => sum + c.capacity, 0),
-    [],
+    [courses],
   );
 
   const fillRate = Math.round((totalEnrolled / totalCapacity) * 100);
@@ -45,7 +48,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Sampleschool School – Fall 2025 Overview</p>
+          <p className="text-gray-500 text-sm mt-1">Schola Academy – Fall 2025 Overview</p>
         </div>
         <Link
           to="/register"

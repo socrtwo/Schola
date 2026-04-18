@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Schola – Continuing Education',
+        name: 'Schola Academy – Continuing Education',
         short_name: 'Schola',
-        description: 'Administration system for Sampleschool School continuing education programs',
+        description: 'Continuing-education administration and registration platform.',
         theme_color: '#1e3a5f',
         background_color: '#ffffff',
         display: 'standalone',

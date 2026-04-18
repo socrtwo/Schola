@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Clock, MapPin, Users, DollarSign } from 'lucide-react';
-import { courses } from '../data/sampleData';
+import { useOfferings } from '../utils/offerings';
 
 const categoryColors: Record<string, string> = {
   'Current Events': 'bg-blue-100 text-blue-700',
@@ -16,6 +16,7 @@ const categoryColors: Record<string, string> = {
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 export default function CourseSchedule() {
+  const courses = useOfferings();
   const [view, setView] = useState<'grid' | 'list'>('list');
   const [filterDay, setFilterDay] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');

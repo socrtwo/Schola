@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter } from 'lucide-react';
-import { students, courses } from '../data/sampleData';
+import { students } from '../data/sampleData';
+import { useOfferings } from '../utils/offerings';
 
 export default function StudentDirectory() {
+  const courses = useOfferings();
   const [query, setQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState('All');
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);

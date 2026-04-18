@@ -7,6 +7,9 @@ import CourseSchedule from './components/CourseSchedule';
 import Transactions from './components/Transactions';
 import ClassRosters from './components/ClassRosters';
 import Registration from './components/Registration';
+import Posters from './components/Posters';
+import OfferingsManager from './components/OfferingsManager';
+import Reminders from './components/Reminders';
 
 export default function App() {
   return (
@@ -51,6 +54,9 @@ function AdminLayout() {
             <Route path="/schedule" element={<CourseSchedule />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/rosters" element={<ClassRosters />} />
+            <Route path="/offerings" element={<OfferingsManager />} />
+            <Route path="/posters" element={<Posters />} />
+            <Route path="/reminders" element={<Reminders />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>

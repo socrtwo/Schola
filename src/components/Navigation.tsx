@@ -8,6 +8,9 @@ import {
   X,
   GraduationCap,
   UserPlus,
+  FolderOpen,
+  Printer,
+  Send,
 } from 'lucide-react';
 
 interface Props {
@@ -15,12 +18,27 @@ interface Props {
   onClose: () => void;
 }
 
-const links = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/students', icon: Users, label: 'Students' },
-  { to: '/schedule', icon: CalendarDays, label: 'Course Schedule' },
-  { to: '/rosters', icon: ClipboardList, label: 'Class Rosters' },
-  { to: '/transactions', icon: CreditCard, label: 'Transactions' },
+interface LinkDef { to: string; icon: typeof Users; label: string; }
+
+const groups: { heading: string; links: LinkDef[] }[] = [
+  {
+    heading: 'Main Menu',
+    links: [
+      { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/students',     icon: Users,           label: 'Students' },
+      { to: '/schedule',     icon: CalendarDays,    label: 'Course Schedule' },
+      { to: '/rosters',      icon: ClipboardList,   label: 'Class Rosters' },
+      { to: '/transactions', icon: CreditCard,      label: 'Transactions' },
+    ],
+  },
+  {
+    heading: 'Curriculum & Outreach',
+    links: [
+      { to: '/offerings',    icon: FolderOpen,      label: 'Offerings' },
+      { to: '/posters',      icon: Printer,         label: 'Posters' },
+      { to: '/reminders',    icon: Send,            label: 'Reminders' },
+    ],
+  },
 ];
 
 export default function Navigation({ isOpen, onClose }: Props) {
@@ -52,7 +70,7 @@ export default function Navigation({ isOpen, onClose }: Props) {
             </div>
             <div>
               <div className="text-white font-bold text-lg leading-none">Schola</div>
-              <div className="text-blue-300 text-xs mt-0.5">Sampleschool School</div>
+              <div className="text-blue-300 text-xs mt-0.5">Academy</div>
             </div>
           </div>
           <button
@@ -65,22 +83,26 @@ export default function Navigation({ isOpen, onClose }: Props) {
         </div>
 
         {/* Navigation links */}
-        <nav className="flex-1 px-3 pb-4 space-y-1 overflow-y-auto">
-          <div className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-3 py-2 mt-2">
-            Main Menu
-          </div>
-          {links.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `nav-item ${isActive ? 'nav-item-active' : 'nav-item-inactive'}`
-              }
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              {label}
-            </NavLink>
+        <nav className="flex-1 px-3 pb-4 space-y-4 overflow-y-auto">
+          {groups.map(group => (
+            <div key={group.heading} className="space-y-1">
+              <div className="text-gray-400 text-xs font-semibold uppercase tracking-wider px-3 py-2">
+                {group.heading}
+              </div>
+              {group.links.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `nav-item ${isActive ? 'nav-item-active' : 'nav-item-inactive'}`
+                  }
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -103,10 +125,8 @@ export default function Navigation({ isOpen, onClose }: Props) {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/10">
-          <p className="text-gray-500 text-xs">
-            © 2026 Paul D Pruitt
-          </p>
-          <p className="text-gray-600 text-xs mt-0.5">v1.0.0</p>
+          <p className="text-gray-500 text-xs">© 2026 Paul D Pruitt</p>
+          <p className="text-gray-600 text-xs mt-0.5">v1.1.0</p>
         </div>
       </aside>
     </>

@@ -20,7 +20,8 @@ import {
   Users,
   HelpCircle,
 } from 'lucide-react';
-import { courses } from '../data/sampleData';
+import type { Course } from '../data/sampleData';
+import { useOfferings } from '../utils/offerings';
 
 type Step = 'welcome' | 'personal' | 'contact' | 'courses' | 'review' | 'success';
 
@@ -74,6 +75,7 @@ const US_STATES = [
 const HELP_PHONE = '(405) 555-0100';
 
 export default function Registration() {
+  const courses = useOfferings();
   const [step, setStep] = useState<Step>('welcome');
   const [data, setData] = useState<FormData>(BLANK);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -85,7 +87,7 @@ export default function Registration() {
 
   const selectedCourseObjs = useMemo(
     () => courses.filter(c => data.selectedCourses.includes(c.id)),
-    [data.selectedCourses],
+    [courses, data.selectedCourses],
   );
 
   const totalFee = selectedCourseObjs.reduce((sum, c) => sum + c.fee, 0);
@@ -164,6 +166,7 @@ export default function Registration() {
               data={data}
               set={set}
               errors={errors}
+              courses={courses}
               totalFee={totalFee}
               onNext={goNext}
               onBack={goBack}
@@ -206,7 +209,7 @@ function PublicHeader() {
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <div className="text-xl font-bold text-gray-900 leading-tight">Sampleschool School</div>
+            <div className="text-xl font-bold text-gray-900 leading-tight">Schola Academy</div>
             <div className="text-sm text-gray-500 leading-tight">Course Registration</div>
           </div>
         </Link>
@@ -229,7 +232,7 @@ function PublicFooter() {
   return (
     <footer className="border-t-2 border-gray-100 bg-white">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
-        <div>© 2026 Sampleschool School of Continuing Education</div>
+        <div>© 2026 Schola Academy of Continuing Education</div>
         <a
           href={`tel:${HELP_PHONE.replace(/\D/g, '')}`}
           className="flex items-center gap-2 font-medium text-blue-700 hover:underline sm:hidden"
@@ -356,7 +359,7 @@ function WelcomeStep({ onStart }: { onStart: () => void }) {
         <GraduationCap className="w-10 h-10 text-blue-700" />
       </div>
       <h1 className="mt-6 text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
-        Welcome to the Sampleschool School
+        Welcome to Schola Academy
       </h1>
       <p className="mt-4 text-lg sm:text-xl text-gray-700 max-w-xl mx-auto">
         Registering for a course takes just a few minutes.
@@ -582,8 +585,8 @@ function ContactStep({ data, set, errors, onNext, onBack }: StepProps) {
 }
 
 function CoursesStep({
-  data, set, errors, totalFee, onNext, onBack,
-}: StepProps & { totalFee: number }) {
+  data, set, errors, courses, totalFee, onNext, onBack,
+}: StepProps & { courses: Course[]; totalFee: number }) {
   const toggle = (id: string, full: boolean) => {
     if (full) return;
     const already = data.selectedCourses.includes(id);
@@ -689,7 +692,7 @@ function ReviewStep({
   data, selectedCourses, totalFee, onSubmit, onBack, onEdit,
 }: {
   data: FormData;
-  selectedCourses: typeof courses;
+  selectedCourses: Course[];
   totalFee: number;
   onSubmit: () => void;
   onBack: () => void;
@@ -788,7 +791,7 @@ function SuccessStep({
   data, selectedCourses, totalFee, onReset,
 }: {
   data: FormData;
-  selectedCourses: typeof courses;
+  selectedCourses: Course[];
   totalFee: number;
   onReset: () => void;
 }) {
