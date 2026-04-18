@@ -11,6 +11,19 @@ on:
 env:
   NODE_VERSION: "22"
 
+# NOTE: Storage budget
+#   Installer artifacts are ~150-300 MB per platform; 5 platforms × every
+#   push quickly exceeds the free-tier 500 MB storage quota. To keep CI
+#   useful without burning quota:
+#     * build-web runs on every push (it's tiny and feeds Pages).
+#     * Platform builds (Windows / macOS / Linux / Android / iOS) only
+#       run on `main`, on version tags, or when you dispatch the workflow
+#       manually.
+#     * Feature-branch pushes still get a type-check + web build, so you
+#       learn quickly if something broke.
+#   You can always run the full matrix on any branch via "Run workflow"
+#   in the Actions tab.
+
 jobs:
   # ─────────────────────────────────────────────
   # 1. Web / PWA (runs on every push)
@@ -36,11 +49,12 @@ jobs:
         run: npm run build:web
 
       - name: Upload web artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: schola-web
           path: dist/
-          retention-days: 30
+          retention-days: 7
 
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main'
@@ -50,10 +64,11 @@ jobs:
           publish_dir: dist
 
   # ─────────────────────────────────────────────
-  # 2. Electron – Windows
+  # 2. Electron – Windows  (release builds only)
   # ─────────────────────────────────────────────
   build-windows:
     name: Build Windows (Electron)
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     needs: build-web
     steps:
@@ -82,13 +97,14 @@ jobs:
           path: |
             release/*.exe
             release/*.msi
-          retention-days: 30
+          retention-days: 7
 
   # ─────────────────────────────────────────────
-  # 3. Electron – macOS
+  # 3. Electron – macOS  (release builds only)
   # ─────────────────────────────────────────────
   build-macos:
     name: Build macOS (Electron)
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     needs: build-web
     steps:
@@ -123,13 +139,14 @@ jobs:
           path: |
             release/*.dmg
             release/*.zip
-          retention-days: 30
+          retention-days: 7
 
   # ─────────────────────────────────────────────
-  # 4. Electron – Linux
+  # 4. Electron – Linux  (release builds only)
   # ─────────────────────────────────────────────
   build-linux:
     name: Build Linux (Electron)
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: build-web
     steps:
@@ -159,13 +176,14 @@ jobs:
             release/*.AppImage
             release/*.deb
             release/*.rpm
-          retention-days: 30
+          retention-days: 7
 
   # ─────────────────────────────────────────────
-  # 5. Android (Capacitor)
+  # 5. Android (Capacitor)  (release builds only)
   # ─────────────────────────────────────────────
   build-android:
     name: Build Android (Capacitor)
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: build-web
     steps:
@@ -208,13 +226,14 @@ jobs:
         with:
           name: schola-android
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          retention-days: 7
 
   # ─────────────────────────────────────────────
-  # 6. iOS (Capacitor) – requires macOS runner
+  # 6. iOS (Capacitor)  (release builds only)
   # ─────────────────────────────────────────────
   build-ios:
     name: Build iOS (Capacitor)
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     needs: build-web
     steps:
@@ -275,7 +294,7 @@ jobs:
           name: schola-ios-build
           path: ~/Library/Developer/Xcode/DerivedData/**/Build/Products/**/*.app
           if-no-files-found: ignore
-          retention-days: 30
+          retention-days: 7
 
   # ─────────────────────────────────────────────
   # 7. Create GitHub Release (on version tags)
