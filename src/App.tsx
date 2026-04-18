@@ -6,8 +6,21 @@ import StudentDirectory from './components/StudentDirectory';
 import CourseSchedule from './components/CourseSchedule';
 import Transactions from './components/Transactions';
 import ClassRosters from './components/ClassRosters';
+import Registration from './components/Registration';
 
 export default function App() {
+  return (
+    <Routes>
+      {/* Public, senior-facing registration — no admin chrome */}
+      <Route path="/register" element={<Registration />} />
+
+      {/* Admin app */}
+      <Route path="/*" element={<AdminLayout />} />
+    </Routes>
+  );
+}
+
+function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -38,6 +51,7 @@ export default function App() {
             <Route path="/schedule" element={<CourseSchedule />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/rosters" element={<ClassRosters />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
       </div>

@@ -10,10 +10,14 @@ export default {
           gold: '#d97706',
           light: '#f0f4f8',
           muted: '#64748b',
+          cream: '#faf7f2',
         },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      maxWidth: {
+        '3.5xl': '56rem',
       },
     },
   },

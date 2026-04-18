@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -7,6 +7,7 @@ import {
   ClipboardList,
   X,
   GraduationCap,
+  UserPlus,
 } from 'lucide-react';
 
 interface Props {
@@ -82,6 +83,23 @@ export default function Navigation({ isOpen, onClose }: Props) {
             </NavLink>
           ))}
         </nav>
+
+        {/* Walk-in registration shortcut */}
+        <div className="px-3 pb-3">
+          <Link
+            to="/register"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 w-full h-11 rounded-lg
+                       bg-amber-500 hover:bg-amber-400 text-schola-navy font-semibold
+                       text-sm transition-colors
+                       focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-schola-navy"
+          >
+            <UserPlus className="w-4 h-4" />
+            New Registration
+          </Link>
+        </div>
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/10">

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -28,6 +28,20 @@
     --sar: env(safe-area-inset-right);
     --sab: env(safe-area-inset-bottom);
     --sal: env(safe-area-inset-left);
+  }
+
+  /* Strong, consistent focus ring for keyboard users. */
+  :focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -74,6 +88,70 @@
 
   .nav-item-inactive {
     @apply text-gray-300 hover:bg-white/10 hover:text-white;
+  }
+
+  /* -------- Senior-friendly registration design system -------- */
+
+  /* Large, high-contrast label used across the registration flow. */
+  .label-lg {
+    @apply block text-lg font-semibold text-gray-900 mb-2;
+  }
+
+  /* Generous input field: 56px tall, 18px text, thick border, strong focus. */
+  .input-lg {
+    @apply w-full h-14 px-4 text-lg bg-white text-gray-900
+           border-2 border-gray-300 rounded-xl
+           placeholder:text-gray-400
+           focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100
+           disabled:bg-gray-100 disabled:text-gray-500;
+  }
+
+  .input-lg-error {
+    @apply border-red-500 focus:border-red-600 focus:ring-red-100;
+  }
+
+  /* Big primary button, roomy for imprecise taps. */
+  .btn-xl-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-schola-blue text-white text-lg font-semibold
+           px-8 h-14 rounded-xl shadow-sm
+           hover:bg-blue-700 active:bg-blue-800 transition-colors
+           focus:outline-none focus:ring-4 focus:ring-blue-200
+           disabled:bg-gray-300 disabled:cursor-not-allowed;
+  }
+
+  .btn-xl-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-white text-gray-800 text-lg font-semibold
+           px-8 h-14 rounded-xl border-2 border-gray-300
+           hover:bg-gray-50 active:bg-gray-100 transition-colors
+           focus:outline-none focus:ring-4 focus:ring-gray-200;
+  }
+
+  /* Helper/error text beneath fields. */
+  .help-text {
+    @apply mt-1.5 text-sm text-gray-500;
+  }
+
+  .error-text {
+    @apply mt-1.5 text-sm text-red-600 font-medium flex items-center gap-1;
+  }
+
+  /* Course "choose" card — large, visually selectable tile. */
+  .course-tile {
+    @apply relative block w-full text-left
+           bg-white border-2 border-gray-200 rounded-2xl p-5
+           transition-all cursor-pointer
+           hover:border-blue-400 hover:shadow-md
+           focus:outline-none focus:ring-4 focus:ring-blue-200;
+  }
+
+  .course-tile-selected {
+    @apply border-blue-600 bg-blue-50 shadow-md;
+  }
+
+  .course-tile-full {
+    @apply opacity-60 cursor-not-allowed hover:border-gray-200 hover:shadow-none;
   }
 }
 

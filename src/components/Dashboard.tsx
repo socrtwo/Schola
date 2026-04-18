@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { Users, BookOpen, DollarSign, TrendingUp, ArrowRight } from 'lucide-react';
+import { Users, BookOpen, DollarSign, TrendingUp, ArrowRight, UserPlus } from 'lucide-react';
 import { students, courses, transactions } from '../data/sampleData';
 
 const COLORS = ['#2563eb', '#d97706', '#10b981', '#f43f5e', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
@@ -42,9 +42,23 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">Sampleschool School – Fall 2025 Overview</p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-1">Sampleschool School – Fall 2025 Overview</p>
+        </div>
+        <Link
+          to="/register"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg
+                     bg-schola-blue text-white font-semibold shadow-sm
+                     hover:bg-blue-700 active:bg-blue-800 transition-colors
+                     focus:outline-none focus:ring-4 focus:ring-blue-200"
+        >
+          <UserPlus className="w-5 h-5" />
+          Open registration page
+        </Link>
       </div>
 
       {/* Stat cards */}
