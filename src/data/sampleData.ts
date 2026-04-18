@@ -9,8 +9,10 @@ export interface Student {
   name: string;
   email: string;
   phone: string;
+  street?: string;
   city: string;
   state: string;
+  zip?: string;
   dob: string;
   gender: string;
   education: string;
@@ -120,21 +122,21 @@ export interface CheckBatch {
 }
 
 export const students: Student[] = [
-  { id: 1,  name: 'Robin Alder',       email: 'robin.a@example.com',    phone: '(555) 010-0101', city: 'Rivertown',  state: 'OK', dob: '1948-03-14', gender: 'F', education: "Bachelor's",    enrolledCourses: ['GD-01', 'WM-02'] },
-  { id: 2,  name: 'Jordan Birch',      email: 'jordan.b@example.com',   phone: '(555) 010-0102', city: 'Eastfield',  state: 'OK', dob: '1945-07-22', gender: 'M', education: "Master's",      enrolledCourses: ['GD-01', 'HS-03'] },
-  { id: 3,  name: 'Casey Cedar',       email: 'casey.c@example.com',    phone: '(555) 010-0103', city: 'Rivertown',  state: 'OK', dob: '1952-11-05', gender: 'F', education: 'Doctorate',     enrolledCourses: ['WM-02', 'AR-04'] },
-  { id: 4,  name: 'Sage Elm',          email: 'sage.e@example.com',     phone: '(555) 010-0104', city: 'Midville',   state: 'OK', dob: '1950-02-18', gender: 'M', education: "Bachelor's",    enrolledCourses: ['GD-01'] },
-  { id: 5,  name: 'Rowan Fern',        email: 'rowan.f@example.com',    phone: '(555) 010-0105', city: 'Northshire', state: 'OK', dob: '1955-09-30', gender: 'F', education: "Master's",      enrolledCourses: ['HS-03', 'WM-02', 'MU-05'] },
-  { id: 6,  name: 'Taylor Grove',      email: 'taylor.g@example.com',   phone: '(555) 010-0106', city: 'Yarrow',     state: 'OK', dob: '1947-12-08', gender: 'M', education: "Bachelor's",    enrolledCourses: ['GD-01', 'AR-04'] },
-  { id: 7,  name: 'Morgan Hawthorn',   email: 'morgan.h@example.com',   phone: '(555) 010-0107', city: 'Rivertown',  state: 'OK', dob: '1953-06-25', gender: 'F', education: 'Some College',  enrolledCourses: ['MU-05', 'WM-02'] },
-  { id: 8,  name: 'Quinn Ivy',         email: 'quinn.i@example.com',    phone: '(555) 010-0108', city: 'Eastfield',  state: 'OK', dob: '1949-04-12', gender: 'M', education: "Master's",      enrolledCourses: ['GD-01', 'HS-03'] },
-  { id: 9,  name: 'Avery Juniper',     email: 'avery.j@example.com',    phone: '(555) 010-0109', city: 'Rivertown',  state: 'OK', dob: '1956-08-17', gender: 'F', education: "Bachelor's",    enrolledCourses: ['AR-04', 'WM-02'] },
-  { id: 10, name: 'Skyler Linden',     email: 'skyler.l@example.com',   phone: '(555) 010-0110', city: 'Mooreton',   state: 'OK', dob: '1944-01-29', gender: 'M', education: 'High School',   enrolledCourses: ['GD-01'] },
-  { id: 11, name: 'Hayden Magnolia',   email: 'hayden.m@example.com',   phone: '(555) 010-0111', city: 'Delmar',     state: 'OK', dob: '1958-05-03', gender: 'F', education: "Bachelor's",    enrolledCourses: ['MU-05', 'HS-03'] },
-  { id: 12, name: 'Parker Oakley',     email: 'parker.o@example.com',   phone: '(555) 010-0112', city: 'Rivertown',  state: 'OK', dob: '1951-10-14', gender: 'M', education: "Master's",      enrolledCourses: ['GD-01', 'WM-02', 'AR-04'] },
-  { id: 13, name: 'Drew Pinehurst',    email: 'drew.p@example.com',     phone: '(555) 010-0113', city: 'Mustanton',  state: 'OK', dob: '1954-03-21', gender: 'F', education: "Bachelor's",    enrolledCourses: ['HS-03'] },
-  { id: 14, name: 'River Quince',      email: 'river.q@example.com',    phone: '(555) 010-0114', city: 'Rivertown',  state: 'OK', dob: '1946-07-09', gender: 'M', education: 'Doctorate',     enrolledCourses: ['GD-01', 'MU-05'] },
-  { id: 15, name: 'Emerson Rowan',     email: 'emerson.r@example.com',  phone: '(555) 010-0115', city: 'Eastfield',  state: 'OK', dob: '1960-12-16', gender: 'F', education: "Master's",      enrolledCourses: ['WM-02', 'AR-04', 'MU-05'] },
+  { id: 1,  name: 'Robin Alder',       email: 'robin.a@example.com',    phone: '(555) 010-0101', street: '101 Alder Way',       city: 'Rivertown',  state: 'OK', zip: '73100', dob: '1948-03-14', gender: 'F', education: "Bachelor's",    enrolledCourses: ['GD-01', 'WM-02'] },
+  { id: 2,  name: 'Jordan Birch',      email: 'jordan.b@example.com',   phone: '(555) 010-0102', street: '210 Birch Lane',      city: 'Eastfield',  state: 'OK', zip: '73101', dob: '1945-07-22', gender: 'M', education: "Master's",      enrolledCourses: ['GD-01', 'HS-03'] },
+  { id: 3,  name: 'Casey Cedar',       email: 'casey.c@example.com',    phone: '(555) 010-0103', street: '38 Cedar Circle',     city: 'Rivertown',  state: 'OK', zip: '73100', dob: '1952-11-05', gender: 'F', education: 'Doctorate',     enrolledCourses: ['WM-02', 'AR-04'] },
+  { id: 4,  name: 'Sage Elm',          email: 'sage.e@example.com',     phone: '(555) 010-0104', street: '77 Elm Street',       city: 'Midville',   state: 'OK', zip: '73102', dob: '1950-02-18', gender: 'M', education: "Bachelor's",    enrolledCourses: ['GD-01'] },
+  { id: 5,  name: 'Rowan Fern',        email: 'rowan.f@example.com',    phone: '(555) 010-0105', street: '412 Fern Hollow Rd',  city: 'Northshire', state: 'OK', zip: '73103', dob: '1955-09-30', gender: 'F', education: "Master's",      enrolledCourses: ['HS-03', 'WM-02', 'MU-05'] },
+  { id: 6,  name: 'Taylor Grove',      email: 'taylor.g@example.com',   phone: '(555) 010-0106', street: '9 Grove Terrace',     city: 'Yarrow',     state: 'OK', zip: '73104', dob: '1947-12-08', gender: 'M', education: "Bachelor's",    enrolledCourses: ['GD-01', 'AR-04'] },
+  { id: 7,  name: 'Morgan Hawthorn',   email: 'morgan.h@example.com',   phone: '(555) 010-0107', street: '506 Hawthorn Dr',     city: 'Rivertown',  state: 'OK', zip: '73100', dob: '1953-06-25', gender: 'F', education: 'Some College',  enrolledCourses: ['MU-05', 'WM-02'] },
+  { id: 8,  name: 'Quinn Ivy',         email: 'quinn.i@example.com',    phone: '(555) 010-0108', street: '63 Ivy Court',        city: 'Eastfield',  state: 'OK', zip: '73101', dob: '1949-04-12', gender: 'M', education: "Master's",      enrolledCourses: ['GD-01', 'HS-03'] },
+  { id: 9,  name: 'Avery Juniper',     email: 'avery.j@example.com',    phone: '(555) 010-0109', street: '148 Juniper Ave',     city: 'Rivertown',  state: 'OK', zip: '73100', dob: '1956-08-17', gender: 'F', education: "Bachelor's",    enrolledCourses: ['AR-04', 'WM-02'] },
+  { id: 10, name: 'Skyler Linden',     email: 'skyler.l@example.com',   phone: '(555) 010-0110', street: '255 Linden Blvd',     city: 'Mooreton',   state: 'OK', zip: '73105', dob: '1944-01-29', gender: 'M', education: 'High School',   enrolledCourses: ['GD-01'] },
+  { id: 11, name: 'Hayden Magnolia',   email: 'hayden.m@example.com',   phone: '(555) 010-0111', street: '19 Magnolia Trail',   city: 'Delmar',     state: 'OK', zip: '73106', dob: '1958-05-03', gender: 'F', education: "Bachelor's",    enrolledCourses: ['MU-05', 'HS-03'] },
+  { id: 12, name: 'Parker Oakley',     email: 'parker.o@example.com',   phone: '(555) 010-0112', street: '320 Oakley Ridge Rd', city: 'Rivertown',  state: 'OK', zip: '73100', dob: '1951-10-14', gender: 'M', education: "Master's",      enrolledCourses: ['GD-01', 'WM-02', 'AR-04'] },
+  { id: 13, name: 'Drew Pinehurst',    email: 'drew.p@example.com',     phone: '(555) 010-0113', street: '82 Pinehurst Loop',   city: 'Mustanton',  state: 'OK', zip: '73107', dob: '1954-03-21', gender: 'F', education: "Bachelor's",    enrolledCourses: ['HS-03'] },
+  { id: 14, name: 'River Quince',      email: 'river.q@example.com',    phone: '(555) 010-0114', street: '461 Quince Row',      city: 'Rivertown',  state: 'OK', zip: '73100', dob: '1946-07-09', gender: 'M', education: 'Doctorate',     enrolledCourses: ['GD-01', 'MU-05'] },
+  { id: 15, name: 'Emerson Rowan',     email: 'emerson.r@example.com',  phone: '(555) 010-0115', street: '17 Rowan Heights Ln', city: 'Eastfield',  state: 'OK', zip: '73101', dob: '1960-12-16', gender: 'F', education: "Master's",      enrolledCourses: ['WM-02', 'AR-04', 'MU-05'] },
 ];
 
 export const courses: Course[] = [

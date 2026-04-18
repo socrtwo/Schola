@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckSquare, Square, Download, Save, UserCheck, Users, DollarSign, Trash2, History } from 'lucide-react';
+import {
+  CheckSquare, Square, Download, Save, UserCheck, Users, DollarSign,
+  Trash2, History, Printer,
+} from 'lucide-react';
 import { students, type AttendanceRecord } from '../data/sampleData';
 import { useOfferings } from '../utils/offerings';
 import { deleteAttendance, listAttendance, saveAttendance } from '../utils/attendance';
@@ -77,10 +80,14 @@ export default function ClassRosters() {
 
   const exportCSV = () => {
     const rows = [
-      ['Name', 'Email', 'Phone', 'Present'],
-      ...enrolled.map(s => [s.name, s.email, s.phone, attendance[s.name] ? 'Yes' : 'No']),
+      ['Name', 'Email', 'Phone', 'Street', 'City', 'State', 'ZIP', 'Present'],
+      ...enrolled.map(s => [
+        s.name, s.email, s.phone,
+        s.street ?? '', s.city, s.state, s.zip ?? '',
+        attendance[s.name] ? 'Yes' : 'No',
+      ]),
     ];
-    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -89,6 +96,8 @@ export default function ClassRosters() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const printRoster = () => window.print();
 
   return (
     <div className="space-y-6">
@@ -133,10 +142,16 @@ export default function ClassRosters() {
               {enrolled.length} enrolled · {presentCount} registered present · {doorCountNum} at the door · {totalAttendance} total
             </p>
           </div>
-          <button onClick={exportCSV} className="btn-secondary flex items-center gap-2 text-sm">
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={printRoster} className="btn-secondary flex items-center gap-2 text-sm">
+              <Printer className="w-4 h-4" />
+              Print roster
+            </button>
+            <button onClick={exportCSV} className="btn-secondary flex items-center gap-2 text-sm">
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
         </div>
 
         {enrolled.length === 0 ? (
@@ -312,6 +327,83 @@ export default function ClassRosters() {
           </div>
         )}
       </div>
+
+      {/* Printable roster — visible only on print (Letter landscape). */}
+      <section className="roster-print hidden print:block">
+        <header className="flex items-start justify-between border-b-2 border-black pb-2 mb-3">
+          <div>
+            <div className="text-xl font-extrabold tracking-tight">SCHOLA ACADEMY</div>
+            <div className="text-[10pt] uppercase tracking-widest">Attendance roster</div>
+          </div>
+          <div className="text-right text-[10pt]">
+            <div className="font-bold">{course.title}</div>
+            <div>{course.day}s · {course.time}</div>
+            <div>{course.location}</div>
+            <div>Instructor: {course.instructor}</div>
+            <div className="mt-1">Session date: <strong>{sessionDate}</strong></div>
+            <div>Roster printed {new Date().toLocaleDateString()}</div>
+          </div>
+        </header>
+
+        <table className="w-full border-collapse" style={{ fontSize: '10pt' }}>
+          <thead>
+            <tr className="border-b-2 border-black">
+              <th className="text-left py-1 pr-2 w-[0.3in]">#</th>
+              <th className="text-left py-1 pr-2 w-[0.4in]">Pres.</th>
+              <th className="text-left py-1 pr-2">Registrant</th>
+              <th className="text-left py-1 pr-2">Phone</th>
+              <th className="text-left py-1 pr-2">Email</th>
+              <th className="text-left py-1 pr-2">Street</th>
+              <th className="text-left py-1 pr-2">City</th>
+              <th className="text-left py-1 pr-2 w-[0.4in]">State</th>
+              <th className="text-left py-1 pr-2 w-[0.55in]">ZIP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {enrolled.map((s, i) => (
+              <tr key={s.id} className="border-b border-gray-400 align-top">
+                <td className="py-1.5 pr-2">{i + 1}</td>
+                <td className="py-1.5 pr-2">
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-black align-middle" aria-hidden />
+                </td>
+                <td className="py-1.5 pr-2 font-semibold">{s.name}</td>
+                <td className="py-1.5 pr-2 whitespace-nowrap">{s.phone}</td>
+                <td className="py-1.5 pr-2">{s.email}</td>
+                <td className="py-1.5 pr-2">{s.street ?? ''}</td>
+                <td className="py-1.5 pr-2">{s.city}</td>
+                <td className="py-1.5 pr-2">{s.state}</td>
+                <td className="py-1.5 pr-2">{s.zip ?? ''}</td>
+              </tr>
+            ))}
+            {enrolled.length === 0 && (
+              <tr><td colSpan={9} className="py-4 text-center">No registrants enrolled.</td></tr>
+            )}
+          </tbody>
+        </table>
+
+        <footer className="mt-4 flex items-start justify-between text-[9pt]">
+          <div>
+            <div>Total registered: <strong>{enrolled.length}</strong></div>
+            <div>Use the checkboxes above to mark attendance, or record attendance digitally in the app.</div>
+          </div>
+          <div className="text-right">
+            <div>Instructor signature ______________________________</div>
+            <div className="mt-2">Date __________</div>
+          </div>
+        </footer>
+      </section>
+
+      {/* Print CSS */}
+      <style>{`
+        @media print {
+          @page { size: letter landscape; margin: 0.4in; }
+          body { background: #fff !important; }
+          body * { visibility: hidden !important; }
+          .roster-print, .roster-print * { visibility: visible !important; }
+          .roster-print { position: absolute; left: 0; top: 0; width: 100% !important; color: #000; }
+          .roster-print tr { page-break-inside: avoid; }
+        }
+      `}</style>
     </div>
   );
 }

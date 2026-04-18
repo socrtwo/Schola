@@ -36,6 +36,7 @@ interface FormData {
   dobYear: string;
   email: string;
   phone: string;
+  street: string;
   city: string;
   state: string;
   zip: string;
@@ -53,6 +54,7 @@ const BLANK: FormData = {
   dobYear: '',
   email: '',
   phone: '',
+  street: '',
   city: '',
   state: 'OK',
   zip: '',
@@ -597,6 +599,20 @@ function ContactStep({ data, set, errors, onNext, onBack }: StepProps) {
         <FieldError message={errors.phone} />
       </div>
 
+      <div>
+        <label htmlFor="street" className="label-lg">Street address</label>
+        <input
+          id="street"
+          type="text"
+          autoComplete="street-address"
+          value={data.street}
+          onChange={e => set('street', e.target.value)}
+          className="input-lg"
+          placeholder="123 Main St, Apt 4"
+        />
+        <p className="help-text">Optional — helps us mail any printed materials.</p>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-6 gap-5">
         <div className="sm:col-span-3">
           <label htmlFor="city" className="label-lg">City</label>
@@ -783,6 +799,7 @@ function ReviewStep({
       <ReviewSection title="Contact" onEdit={() => onEdit('contact')}>
         <ReviewRow label="Email" value={data.email || '—'} />
         <ReviewRow label="Phone" value={data.phone || '—'} />
+        {data.street && <ReviewRow label="Street" value={data.street} />}
         <ReviewRow label="City" value={`${data.city}, ${data.state} ${data.zip}`} />
       </ReviewSection>
 

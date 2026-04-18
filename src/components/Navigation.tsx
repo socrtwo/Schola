@@ -151,7 +151,7 @@ export default function Navigation({ isOpen, onClose }: Props) {
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/10">
           <p className="text-gray-500 text-xs">© 2026 Paul D Pruitt</p>
-          <p className="text-gray-600 text-xs mt-0.5">v1.3.0</p>
+          <p className="text-gray-600 text-xs mt-0.5">v1.3.1</p>
         </div>
       </aside>
     </>
