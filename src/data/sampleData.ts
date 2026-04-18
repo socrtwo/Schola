@@ -81,6 +81,33 @@ export interface ReminderLog {
   channel: 'email' | 'sms' | 'both';
 }
 
+export interface AttendanceRecord {
+  id: string;
+  courseId: string;
+  sessionDate: string;          // ISO date of the meeting
+  registeredPresent: number;    // pre-registered attendees who showed
+  registeredEnrolled: number;   // enrolled count snapshot
+  doorCount: number;            // non-registered "pay at door" attendees
+  doorRevenue: number;          // total collected at the door
+  donations: number;            // drop-in donations collected at session
+  notes?: string;
+  recordedAt: number;
+}
+
+export interface RegistrationRecord {
+  id: string;
+  mode: 'online' | 'paper';
+  studentName: string;
+  email: string;
+  phone: string;
+  courseIds: string[];
+  expectedAmount: number;
+  amountEnclosed: number;
+  paymentMethod?: 'cash' | 'check' | 'card' | 'none';
+  recordedAt: number;
+  confirmationSent: boolean;
+}
+
 export const students: Student[] = [
   { id: 1,  name: 'Robin Alder',       email: 'robin.a@example.com',    phone: '(555) 010-0101', city: 'Rivertown',  state: 'OK', dob: '1948-03-14', gender: 'F', education: "Bachelor's",    enrolledCourses: ['GD-01', 'WM-02'] },
   { id: 2,  name: 'Jordan Birch',      email: 'jordan.b@example.com',   phone: '(555) 010-0102', city: 'Eastfield',  state: 'OK', dob: '1945-07-22', gender: 'M', education: "Master's",      enrolledCourses: ['GD-01', 'HS-03'] },

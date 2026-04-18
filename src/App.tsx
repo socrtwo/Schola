@@ -10,6 +10,8 @@ import Registration from './components/Registration';
 import Posters from './components/Posters';
 import OfferingsManager from './components/OfferingsManager';
 import Reminders from './components/Reminders';
+import Reports from './components/Reports';
+import PaperForm from './components/PaperForm';
 
 export default function App() {
   return (
@@ -57,6 +59,8 @@ function AdminLayout() {
             <Route path="/offerings" element={<OfferingsManager />} />
             <Route path="/posters" element={<Posters />} />
             <Route path="/reminders" element={<Reminders />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/paper-form" element={<PaperForm />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>

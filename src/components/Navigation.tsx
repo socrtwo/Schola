@@ -11,6 +11,9 @@ import {
   FolderOpen,
   Printer,
   Send,
+  BarChart3,
+  FileText,
+  Mail,
 } from 'lucide-react';
 
 interface Props {
@@ -37,6 +40,13 @@ const groups: { heading: string; links: LinkDef[] }[] = [
       { to: '/offerings',    icon: FolderOpen,      label: 'Offerings' },
       { to: '/posters',      icon: Printer,         label: 'Posters' },
       { to: '/reminders',    icon: Send,            label: 'Reminders' },
+    ],
+  },
+  {
+    heading: 'Reports & Forms',
+    links: [
+      { to: '/reports',      icon: BarChart3,       label: 'Reports' },
+      { to: '/paper-form',   icon: FileText,        label: 'Mail-in Form' },
     ],
   },
 ];
@@ -107,7 +117,7 @@ export default function Navigation({ isOpen, onClose }: Props) {
         </nav>
 
         {/* Walk-in registration shortcut */}
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 space-y-2">
           <Link
             to="/register"
             target="_blank"
@@ -119,14 +129,27 @@ export default function Navigation({ isOpen, onClose }: Props) {
                        focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-schola-navy"
           >
             <UserPlus className="w-4 h-4" />
-            New Registration
+            Walk-in / online registration
+          </Link>
+          <Link
+            to="/register?mode=paper"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 w-full h-10 rounded-lg
+                       bg-white/10 hover:bg-white/20 text-amber-200 font-medium
+                       text-xs transition-colors
+                       focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-schola-navy"
+          >
+            <Mail className="w-4 h-4" />
+            Enter mail-in paper form
           </Link>
         </div>
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/10">
           <p className="text-gray-500 text-xs">© 2026 Paul D Pruitt</p>
-          <p className="text-gray-600 text-xs mt-0.5">v1.1.0</p>
+          <p className="text-gray-600 text-xs mt-0.5">v1.2.0</p>
         </div>
       </aside>
     </>

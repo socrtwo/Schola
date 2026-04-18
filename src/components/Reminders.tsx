@@ -2,7 +2,7 @@ import Papa from 'papaparse';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Mail, MessageSquare, Send, Copy, CheckCircle2, Upload, Download,
-  Trash2, Users, AlertTriangle, Paperclip, ClipboardList, Info,
+  Trash2, Users, AlertTriangle, Paperclip, ClipboardList, Info, CalendarClock,
 } from 'lucide-react';
 import { students, type Contact, type ReminderLog } from '../data/sampleData';
 import { useOfferings } from '../utils/offerings';
@@ -11,6 +11,7 @@ import { genId, loadJSON, saveJSON } from '../utils/storage';
 
 const CONTACTS_KEY  = 'schola:contacts';
 const LOG_KEY       = 'schola:reminder-log';
+const CADENCE_KEY   = 'schola:reminder-cadence-days';
 
 type Tab = 'compose' | 'contacts' | 'log';
 
@@ -89,7 +90,10 @@ function Compose() {
   const [includeContacts, setIncludeContacts]     = useState(true);
   const [attachmentCounts, setAttachmentCounts]   = useState<Record<string, { count: number; names: string[] }>>({});
   const [sentFlash, setSentFlash] = useState(false);
-  const [copied, setCopied]       = useState(false);
+  const [copiedKind, setCopiedKind] = useState<null | 'email' | 'phone' | 'body'>(null);
+
+  const [cadenceDays, setCadenceDays] = useState<number>(() => loadJSON<number>(CADENCE_KEY, 7));
+  useEffect(() => { saveJSON(CADENCE_KEY, cadenceDays); }, [cadenceDays]);
 
   const contacts = loadJSON<Contact[]>(CONTACTS_KEY, []);
 
@@ -163,7 +167,7 @@ function Compose() {
     return Array.from(set);
   }, [includeRegistered, includeContacts, registeredRecipients, doorRecipients]);
 
-  const sendNow = () => {
+  const logSend = () => {
     const log = loadJSON<ReminderLog[]>(LOG_KEY, []);
     log.unshift({
       id: genId('rem-'),
@@ -174,29 +178,67 @@ function Compose() {
       channel,
     });
     saveJSON(LOG_KEY, log.slice(0, 50));
-
-    // Launch the user's mail client with BCC and attached body.
-    if (channel === 'email' || channel === 'both') {
-      const href = `mailto:?bcc=${encodeURIComponent(emailList.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(href, '_blank');
-    }
-    setSentFlash(true);
-    setTimeout(() => setSentFlash(false), 2500);
   };
 
-  const copyRecipients = async (kind: 'email' | 'sms') => {
-    const text = kind === 'email' ? emailList.join(', ') : phoneList.join(', ');
+  const flash = () => { setSentFlash(true); setTimeout(() => setSentFlash(false), 2500); };
+
+  const sendEmail = () => {
+    if (!emailList.length) return;
+    const href = `mailto:?bcc=${encodeURIComponent(emailList.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(href, '_blank');
+    logSend();
+    flash();
+  };
+
+  // Bulk SMS via sms: URIs is not universally supported. For best compatibility
+  // we open one link that bcc's every number via comma-separation (iOS, many
+  // Android builds accept this); staff can also copy-paste into their bulk SMS
+  // tool. We always copy the body to the clipboard so pasting is one step.
+  const sendSms = async () => {
+    if (!phoneList.length) return;
+    try { await navigator.clipboard.writeText(sms); } catch { /* ignore */ }
+    const numbers = phoneList.map(p => p.replace(/[^\d+]/g, '')).filter(Boolean).join(',');
+    const href = `sms:${numbers}?&body=${encodeURIComponent(sms)}`;
+    window.open(href, '_blank');
+    logSend();
+    flash();
+  };
+
+  const sendNow = () => {
+    if (channel === 'email' || channel === 'both') sendEmail();
+    if (channel === 'sms'   || channel === 'both') sendSms();
+    if (channel === 'email' && !emailList.length) return;
+    if (channel === 'sms'   && !phoneList.length) return;
+  };
+
+  const copyTo = async (kind: 'email' | 'phone' | 'body') => {
+    const text = kind === 'email' ? emailList.join(', ')
+               : kind === 'phone' ? phoneList.join(', ')
+               : sms;
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopiedKind(kind);
+      setTimeout(() => setCopiedKind(null), 2000);
     } catch { /* ignore */ }
   };
+
+  // Last send + next scheduled date.
+  const lastSend = useMemo(() => {
+    const log = loadJSON<ReminderLog[]>(LOG_KEY, []);
+    return log[0]?.sentAt ?? null;
+  }, [sentFlash]);
+
+  const nextSendLabel = useMemo(() => {
+    if (!lastSend) return 'Not yet scheduled — send the first reminder to start the cadence.';
+    const next = new Date(lastSend);
+    next.setDate(next.getDate() + cadenceDays);
+    return `Next reminder due ${next.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`;
+  }, [lastSend, cadenceDays]);
 
   return (
     <div className="space-y-5">
       <div className="card space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label htmlFor="wk" className="block text-sm font-semibold text-gray-700 mb-1">
               Week of (Monday)
@@ -207,6 +249,19 @@ function Compose() {
               className="w-full border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          <div>
+            <label htmlFor="cadence" className="block text-sm font-semibold text-gray-700 mb-1">
+              Reminder cadence (days)
+            </label>
+            <input
+              id="cadence" type="number" min={1} max={90} value={cadenceDays}
+              onChange={e => setCadenceDays(Math.max(1, Math.min(90, Number(e.target.value) || 7)))}
+              className="w-full border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">1 = daily · 7 = weekly · 14 = biweekly</p>
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Channel</label>
             <div className="flex rounded-lg border border-gray-300 overflow-hidden">
@@ -224,6 +279,7 @@ function Compose() {
               ))}
             </div>
           </div>
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Include</label>
             <div className="flex flex-col gap-2">
@@ -241,6 +297,11 @@ function Compose() {
           </div>
         </div>
 
+        <div className="pt-3 border-t border-gray-100 text-sm text-gray-600 flex items-center gap-2">
+          <CalendarClock className="w-4 h-4 text-gray-400" />
+          <span className="font-medium text-gray-800">{nextSendLabel}</span>
+        </div>
+
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Users className="w-4 h-4" />
@@ -249,22 +310,37 @@ function Compose() {
             <strong className="text-gray-900">{phoneList.length}</strong> phones
           </div>
           <div className="flex-1" />
-          <button onClick={() => copyRecipients('email')} className="btn-secondary inline-flex items-center gap-2 text-sm">
+          <button onClick={() => copyTo('email')} className="btn-secondary inline-flex items-center gap-2 text-sm">
             <Copy className="w-4 h-4" /> Copy emails
           </button>
-          <button onClick={() => copyRecipients('sms')} className="btn-secondary inline-flex items-center gap-2 text-sm">
+          <button onClick={() => copyTo('phone')} className="btn-secondary inline-flex items-center gap-2 text-sm">
             <Copy className="w-4 h-4" /> Copy phones
           </button>
-          <button onClick={sendNow} className="btn-primary inline-flex items-center gap-2 text-sm">
-            <Send className="w-4 h-4" /> Send reminder
+          <button onClick={() => copyTo('body')} className="btn-secondary inline-flex items-center gap-2 text-sm">
+            <Copy className="w-4 h-4" /> Copy SMS body
           </button>
+          {(channel === 'email' || channel === 'both') && (
+            <button onClick={sendEmail} disabled={!emailList.length} className="btn-primary inline-flex items-center gap-2 text-sm disabled:opacity-40">
+              <Mail className="w-4 h-4" /> Send emails
+            </button>
+          )}
+          {(channel === 'sms' || channel === 'both') && (
+            <button onClick={sendSms} disabled={!phoneList.length} className="btn-primary inline-flex items-center gap-2 text-sm disabled:opacity-40">
+              <MessageSquare className="w-4 h-4" /> Send texts
+            </button>
+          )}
+          {channel === 'both' && (
+            <button onClick={sendNow} disabled={!emailList.length && !phoneList.length} className="btn-primary inline-flex items-center gap-2 text-sm disabled:opacity-40">
+              <Send className="w-4 h-4" /> Send both
+            </button>
+          )}
         </div>
 
-        {(sentFlash || copied) && (
+        {(sentFlash || copiedKind) && (
           <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
             <CheckCircle2 className="w-4 h-4" />
-            {sentFlash && 'Reminder queued — your email client should open with the message.'}
-            {copied && !sentFlash && 'Copied to clipboard.'}
+            {sentFlash && 'Sent — your mail / messaging app should open with the message.'}
+            {copiedKind && !sentFlash && `${copiedKind === 'body' ? 'Message body' : copiedKind === 'email' ? 'Email list' : 'Phone list'} copied to clipboard.`}
           </div>
         )}
       </div>
@@ -299,7 +375,10 @@ function Compose() {
             <h2 className="text-lg font-semibold text-gray-900">Text-message preview</h2>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            SMS is kept under 320 characters. A sending integration would deliver this via your provider.
+            Kept under 320 characters. "Send texts" opens your default SMS app with the body
+            pre-filled and every recipient number attached. Not all platforms handle bulk
+            <code> sms:</code> URIs — use <strong>Copy phones</strong> / <strong>Copy SMS body</strong>
+            to paste into your bulk messaging tool if needed.
           </p>
           <pre className="whitespace-pre-wrap text-sm bg-gray-900 text-gray-100 rounded-lg p-4">{sms}</pre>
         </div>
@@ -309,9 +388,11 @@ function Compose() {
         <div className="flex items-start gap-3 text-sm text-amber-900">
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <p>
-            <strong>Delivery:</strong> this build composes the message and opens your
-            mail client with every recipient BCC'd. To send automatically at scale,
-            connect a transactional email / SMS provider in a future update.
+            <strong>Delivery:</strong> reminders are composed here and handed to your
+            email and messaging apps via standard <code>mailto:</code> / <code>sms:</code>
+            links. The cadence you choose is remembered between visits and used to compute
+            the next scheduled date. For fully automated bulk delivery at scale, connect a
+            transactional email / SMS provider in a future update.
           </p>
         </div>
       </div>

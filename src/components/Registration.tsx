@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   GraduationCap,
   Phone,
@@ -19,9 +19,12 @@ import {
   DollarSign,
   Users,
   HelpCircle,
+  MessageSquare,
+  ShieldCheck,
 } from 'lucide-react';
 import type { Course } from '../data/sampleData';
 import { useOfferings } from '../utils/offerings';
+import { saveRegistration, markConfirmationSent } from '../utils/registrations';
 
 type Step = 'welcome' | 'personal' | 'contact' | 'courses' | 'review' | 'success';
 
@@ -37,6 +40,8 @@ interface FormData {
   state: string;
   zip: string;
   selectedCourses: string[];
+  paymentMethod: 'cash' | 'check' | 'card' | 'none';
+  amountEnclosed: string; // paper mode only
 }
 
 const BLANK: FormData = {
@@ -51,6 +56,8 @@ const BLANK: FormData = {
   state: 'OK',
   zip: '',
   selectedCourses: [],
+  paymentMethod: 'none',
+  amountEnclosed: '',
 };
 
 const STEPS: { id: Step; label: string; icon: typeof User }[] = [
@@ -76,8 +83,12 @@ const HELP_PHONE = '(405) 555-0100';
 
 export default function Registration() {
   const courses = useOfferings();
+  const [searchParams] = useSearchParams();
+  const isPaper = searchParams.get('mode') === 'paper';
+
   const [step, setStep] = useState<Step>('welcome');
   const [data, setData] = useState<FormData>(BLANK);
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
   const set = <K extends keyof FormData>(key: K, value: FormData[K]) => {
@@ -127,12 +138,31 @@ export default function Registration() {
     return Object.keys(next).length === 0;
   };
 
+  const expectedAmount = selectedCourseObjs.reduce((s, c) => s + c.fee, 0);
+
+  const submitRegistration = () => {
+    const rec = saveRegistration({
+      mode: isPaper ? 'paper' : 'online',
+      studentName: `${data.firstName} ${data.lastName}`.trim(),
+      email: data.email.trim(),
+      phone: data.phone.trim(),
+      courseIds: data.selectedCourses,
+      expectedAmount,
+      amountEnclosed: isPaper ? Number(data.amountEnclosed || '0') : 0,
+      paymentMethod: isPaper ? data.paymentMethod : 'none',
+      confirmationSent: false,
+    });
+    setRegistrationId(rec.id);
+    setStep('success');
+    window.scrollTo(0, 0);
+  };
+
   const goNext = () => {
     if (step === 'welcome')   { setStep('personal'); window.scrollTo(0, 0); return; }
     if (step === 'personal')  { if (validate('personal')) { setStep('contact'); window.scrollTo(0, 0); } return; }
     if (step === 'contact')   { if (validate('contact'))  { setStep('courses'); window.scrollTo(0, 0); } return; }
     if (step === 'courses')   { if (validate('courses'))  { setStep('review');  window.scrollTo(0, 0); } return; }
-    if (step === 'review')    { setStep('success'); window.scrollTo(0, 0); return; }
+    if (step === 'review')    { submitRegistration(); return; }
   };
 
   const goBack = () => {
@@ -144,6 +174,7 @@ export default function Registration() {
   const resetAll = () => {
     setData(BLANK);
     setErrors({});
+    setRegistrationId(null);
     setStep('welcome');
     window.scrollTo(0, 0);
   };
@@ -152,13 +183,26 @@ export default function Registration() {
     <div className="min-h-full bg-schola-cream flex flex-col">
       <PublicHeader />
 
+      {isPaper && (
+        <div className="bg-amber-400 text-amber-950 border-b-2 border-amber-500">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+            <div className="text-sm">
+              <strong>Assistant registrar mode</strong> — entering a mailed-in paper registration.
+              An Amount Enclosed field appears on the Review step to capture the check or cash
+              received and flag any under/overpayment.
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 w-full px-4 sm:px-6 py-8 sm:py-10">
         <div className="max-w-3xl mx-auto">
           {step !== 'welcome' && step !== 'success' && (
             <StepIndicator current={step} />
           )}
 
-          {step === 'welcome'  && <WelcomeStep onStart={goNext} />}
+          {step === 'welcome'  && <WelcomeStep onStart={goNext} isPaper={isPaper} />}
           {step === 'personal' && <PersonalStep data={data} set={set} errors={errors} onNext={goNext} onBack={goBack} />}
           {step === 'contact'  && <ContactStep  data={data} set={set} errors={errors} onNext={goNext} onBack={goBack} />}
           {step === 'courses'  && (
@@ -175,8 +219,10 @@ export default function Registration() {
           {step === 'review'   && (
             <ReviewStep
               data={data}
+              set={set}
               selectedCourses={selectedCourseObjs}
               totalFee={totalFee}
+              isPaper={isPaper}
               onSubmit={goNext}
               onBack={goBack}
               onEdit={setStep}
@@ -187,6 +233,8 @@ export default function Registration() {
               data={data}
               selectedCourses={selectedCourseObjs}
               totalFee={totalFee}
+              registrationId={registrationId}
+              isPaper={isPaper}
               onReset={resetAll}
             />
           )}
@@ -352,29 +400,40 @@ function FieldError({ message }: { message?: string }) {
 
 /* ---------------- Steps ---------------- */
 
-function WelcomeStep({ onStart }: { onStart: () => void }) {
+function WelcomeStep({ onStart, isPaper }: { onStart: () => void; isPaper: boolean }) {
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
       <div className="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
         <GraduationCap className="w-10 h-10 text-blue-700" />
       </div>
       <h1 className="mt-6 text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
-        Welcome to Schola Academy
+        {isPaper ? 'Enter a mailed-in registration' : 'Welcome to Schola Academy'}
       </h1>
       <p className="mt-4 text-lg sm:text-xl text-gray-700 max-w-xl mx-auto">
-        Registering for a course takes just a few minutes.
-        We'll ask for your name, how to reach you, and which classes you'd like to take.
+        {isPaper
+          ? 'Type the registrant\'s details from their paper form, select the offerings they marked, then record the payment enclosed.'
+          : 'Registering for a course takes just a few minutes. We\'ll ask for your name, how to reach you, and which classes you\'d like to take.'}
       </p>
 
       <ul className="mt-8 text-left max-w-lg mx-auto space-y-3 text-gray-700">
-        <ChecklistItem>You can go back to any step at any time.</ChecklistItem>
-        <ChecklistItem>Payment is handled in person or by phone — no card details here.</ChecklistItem>
-        <ChecklistItem>If you get stuck, call us at <strong>{HELP_PHONE}</strong>.</ChecklistItem>
+        {isPaper ? (
+          <>
+            <ChecklistItem>Use the paper form exactly as submitted — any field may be blank.</ChecklistItem>
+            <ChecklistItem>On Review, enter the amount enclosed. The system will flag under/overpayments.</ChecklistItem>
+            <ChecklistItem>Confirmations can be sent by email or text from the final screen.</ChecklistItem>
+          </>
+        ) : (
+          <>
+            <ChecklistItem>You can go back to any step at any time.</ChecklistItem>
+            <ChecklistItem>Payment is handled in person or by phone — no card details here.</ChecklistItem>
+            <ChecklistItem>If you get stuck, call us at <strong>{HELP_PHONE}</strong>.</ChecklistItem>
+          </>
+        )}
       </ul>
 
       <div className="mt-10">
         <button type="button" onClick={onStart} className="btn-xl-primary w-full sm:w-auto">
-          Start Registration
+          {isPaper ? 'Begin entry' : 'Start Registration'}
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
@@ -689,11 +748,13 @@ function CoursesStep({
 }
 
 function ReviewStep({
-  data, selectedCourses, totalFee, onSubmit, onBack, onEdit,
+  data, set, selectedCourses, totalFee, isPaper, onSubmit, onBack, onEdit,
 }: {
   data: FormData;
+  set: <K extends keyof FormData>(key: K, value: FormData[K]) => void;
   selectedCourses: Course[];
   totalFee: number;
+  isPaper: boolean;
   onSubmit: () => void;
   onBack: () => void;
   onEdit: (s: Step) => void;
@@ -703,8 +764,14 @@ function ReviewStep({
     ? `${MONTHS[Number(data.dobMonth) - 1]} ${Number(data.dobDay)}, ${data.dobYear}`
     : '—';
 
+  const enclosed = Number(data.amountEnclosed || '0');
+  const diff = enclosed - totalFee; // positive = overpay, negative = underpay
+  const paymentMissing = isPaper && data.paymentMethod === 'none';
+
   return (
-    <StepCard title="Please review" subtitle="Double-check everything below, then submit your registration.">
+    <StepCard title="Please review" subtitle={isPaper
+      ? 'Verify the registrant\'s details, then record the payment enclosed.'
+      : 'Double-check everything below, then submit your registration.'}>
       <ReviewSection title="About you" onEdit={() => onEdit('personal')}>
         <ReviewRow label="Name" value={fullName || '—'} />
         <ReviewRow label="Date of birth" value={dob} />
@@ -738,20 +805,96 @@ function ReviewStep({
         </div>
       </ReviewSection>
 
-      <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <HelpCircle className="w-6 h-6 text-amber-700 flex-shrink-0 mt-0.5" />
-        <p className="text-sm sm:text-base text-amber-900">
-          Payment is not required now. A member of our staff will contact you at
-          <strong className="px-1">{data.phone || 'your phone'}</strong>
-          to arrange payment by check, cash, or card.
-        </p>
-      </div>
+      {isPaper ? (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-amber-700" />
+            <h3 className="text-lg font-bold text-amber-900">Payment enclosed (paper form)</h3>
+          </div>
+
+          <div>
+            <span className="block text-sm font-semibold text-amber-900 mb-2">Payment method</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(['check', 'cash', 'card', 'none'] as const).map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => set('paymentMethod', m)}
+                  className={[
+                    'h-12 rounded-lg border-2 font-semibold text-sm capitalize transition-colors',
+                    data.paymentMethod === m
+                      ? 'border-amber-600 bg-amber-100 text-amber-900'
+                      : 'border-amber-200 bg-white text-gray-700 hover:bg-amber-50',
+                  ].join(' ')}
+                >
+                  {m === 'card' ? 'Call to arrange card' : m === 'none' ? 'No payment yet' : m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="enclosed" className="block text-sm font-semibold text-amber-900 mb-2">
+              Amount enclosed ($)
+            </label>
+            <input
+              id="enclosed"
+              type="number" min={0} step="0.01" inputMode="decimal"
+              value={data.amountEnclosed}
+              onChange={e => set('amountEnclosed', e.target.value)}
+              placeholder="0.00"
+              className="w-full h-12 text-lg px-3 bg-white border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-amber-200"
+            />
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-amber-200">
+                Expected: <strong className="text-gray-900">${totalFee.toFixed(2)}</strong>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-amber-200">
+                Enclosed: <strong className="text-gray-900">${enclosed.toFixed(2)}</strong>
+              </span>
+              {enclosed === 0 && (
+                <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md">
+                  No payment recorded
+                </span>
+              )}
+              {enclosed > 0 && diff === 0 && (
+                <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md font-semibold">
+                  <Check className="w-3.5 h-3.5" /> Paid in full
+                </span>
+              )}
+              {enclosed > 0 && diff < 0 && (
+                <span className="inline-flex items-center gap-1.5 bg-red-100 text-red-800 px-2.5 py-1 rounded-md font-semibold">
+                  <AlertCircle className="w-3.5 h-3.5" /> Underpaid ${Math.abs(diff).toFixed(2)}
+                </span>
+              )}
+              {enclosed > 0 && diff > 0 && (
+                <span className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-800 px-2.5 py-1 rounded-md font-semibold">
+                  Overpaid +${diff.toFixed(2)} (credit)
+                </span>
+              )}
+            </div>
+            <p className="mt-3 text-sm text-amber-900">
+              Any under/overpayment is recorded on the registrant's balance and shown on the Balances report.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <HelpCircle className="w-6 h-6 text-amber-700 flex-shrink-0 mt-0.5" />
+          <p className="text-sm sm:text-base text-amber-900">
+            Payment is not required now. A member of our staff will contact you at
+            <strong className="px-1">{data.phone || 'your phone'}</strong>
+            to arrange payment by check, cash, or card.
+          </p>
+        </div>
+      )}
 
       <StepNav
         onBack={onBack}
         onNext={onSubmit}
         backLabel="Back"
-        nextLabel="Submit Registration"
+        nextLabel={isPaper ? 'Save paper registration' : 'Submit Registration'}
+        nextDisabled={paymentMissing && enclosed > 0}
       />
     </StepCard>
   );
@@ -788,17 +931,48 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 }
 
 function SuccessStep({
-  data, selectedCourses, totalFee, onReset,
+  data, selectedCourses, totalFee, registrationId, isPaper, onReset,
 }: {
   data: FormData;
   selectedCourses: Course[];
   totalFee: number;
+  registrationId: string | null;
+  isPaper: boolean;
   onReset: () => void;
 }) {
   const confirmation = useMemo(
-    () => `KS-${Date.now().toString().slice(-6)}`,
-    [],
+    () => `SA-${(registrationId ?? Date.now().toString()).slice(-6).toUpperCase()}`,
+    [registrationId],
   );
+
+  const enclosed = Number(data.amountEnclosed || '0');
+  const diff = enclosed - totalFee;
+
+  const confirmationSubject = `Schola Academy registration confirmed (${confirmation})`;
+  const confirmationBody = useMemo(() => buildConfirmationText({
+    firstName: data.firstName,
+    confirmation,
+    courses: selectedCourses,
+    total: totalFee,
+    enclosed,
+    isPaper,
+  }), [data.firstName, confirmation, selectedCourses, totalFee, enclosed, isPaper]);
+
+  const smsBody = useMemo(() => buildConfirmationSms({
+    confirmation, courses: selectedCourses, total: totalFee, enclosed, isPaper,
+  }), [confirmation, selectedCourses, totalFee, enclosed, isPaper]);
+
+  const mailtoHref = data.email
+    ? `mailto:${encodeURIComponent(data.email)}?subject=${encodeURIComponent(confirmationSubject)}&body=${encodeURIComponent(confirmationBody)}`
+    : null;
+
+  const smsHref = data.phone
+    ? `sms:${encodeURIComponent(data.phone.replace(/[^\d+]/g, ''))}?body=${encodeURIComponent(smsBody)}`
+    : null;
+
+  const markSent = () => {
+    if (registrationId) markConfirmationSent(registrationId);
+  };
 
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
@@ -806,11 +980,12 @@ function SuccessStep({
         <PartyPopper className="w-10 h-10 text-green-700" />
       </div>
       <h1 className="mt-6 text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
-        You're registered!
+        {isPaper ? 'Paper registration saved' : 'You\'re registered!'}
       </h1>
       <p className="mt-4 text-lg sm:text-xl text-gray-700 max-w-xl mx-auto">
-        Thank you, {data.firstName}. A confirmation has been sent to
-        <strong className="px-1">{data.email}</strong>.
+        {isPaper
+          ? <>Registration for <strong>{data.firstName} {data.lastName}</strong> has been saved. You can send them a confirmation below.</>
+          : <>Thank you, {data.firstName}. A confirmation can be sent to <strong className="px-1">{data.email}</strong>.</>}
       </p>
 
       <div className="mt-8 mx-auto max-w-md bg-gray-50 border border-gray-200 rounded-xl p-5 text-left">
@@ -826,30 +1001,120 @@ function SuccessStep({
           <span className="text-gray-600">Total due</span>
           <span className="font-bold text-gray-900">${totalFee.toFixed(0)}</span>
         </div>
+        {isPaper && (
+          <>
+            <div className="flex justify-between text-base mt-2">
+              <span className="text-gray-600">Enclosed</span>
+              <span className="font-semibold text-gray-900">${enclosed.toFixed(2)}</span>
+            </div>
+            {enclosed > 0 && diff !== 0 && (
+              <div className={`mt-2 text-sm font-semibold ${diff < 0 ? 'text-red-700' : 'text-blue-700'}`}>
+                {diff < 0 ? `Underpayment of $${Math.abs(diff).toFixed(2)} recorded.` : `Overpayment of $${diff.toFixed(2)} recorded as credit.`}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      <p className="mt-6 text-gray-600 max-w-xl mx-auto">
-        A staff member will call you within 2 business days to arrange payment.
-        If you'd like to reach us first, call <strong>{HELP_PHONE}</strong>.
-      </p>
+      {/* Confirmation delivery */}
+      <div className="mt-8 mx-auto max-w-lg bg-blue-50 border-2 border-blue-100 rounded-xl p-5 text-left">
+        <h2 className="text-base font-semibold text-blue-900">Send confirmation</h2>
+        <p className="text-sm text-blue-800 mt-1">
+          {mailtoHref || smsHref
+            ? 'Opens your email or messaging app pre-filled with the class list and total.'
+            : 'No email or phone on file — confirmations cannot be sent automatically.'}
+        </p>
+        <div className="mt-3 flex flex-col sm:flex-row gap-2">
+          <a
+            href={mailtoHref ?? '#'}
+            onClick={e => { if (!mailtoHref) e.preventDefault(); else markSent(); }}
+            aria-disabled={!mailtoHref}
+            className={[
+              'inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl font-semibold text-sm flex-1',
+              mailtoHref
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed',
+            ].join(' ')}
+          >
+            <Mail className="w-4 h-4" />
+            Email confirmation
+          </a>
+          <a
+            href={smsHref ?? '#'}
+            onClick={e => { if (!smsHref) e.preventDefault(); else markSent(); }}
+            aria-disabled={!smsHref}
+            className={[
+              'inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl font-semibold text-sm flex-1',
+              smsHref
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed',
+            ].join(' ')}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Text confirmation
+          </a>
+        </div>
+      </div>
+
+      {!isPaper && (
+        <p className="mt-6 text-gray-600 max-w-xl mx-auto">
+          A staff member will call you within 2 business days to arrange payment.
+          If you'd like to reach us first, call <strong>{HELP_PHONE}</strong>.
+        </p>
+      )}
 
       <div className="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="btn-xl-secondary"
-        >
+        <button type="button" onClick={() => window.print()} className="btn-xl-secondary">
           <Printer className="w-5 h-5" />
           Print receipt
         </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="btn-xl-primary"
-        >
-          Register another person
+        <button type="button" onClick={onReset} className="btn-xl-primary">
+          {isPaper ? 'Enter another paper form' : 'Register another person'}
         </button>
       </div>
     </section>
   );
+}
+
+function buildConfirmationText({
+  firstName, confirmation, courses, total, enclosed, isPaper,
+}: {
+  firstName: string; confirmation: string; courses: Course[]; total: number; enclosed: number; isPaper: boolean;
+}): string {
+  const lines: string[] = [];
+  lines.push(`Hello${firstName ? ' ' + firstName : ''},`);
+  lines.push('');
+  lines.push(`Your registration at Schola Academy is confirmed. Confirmation: ${confirmation}.`);
+  lines.push('');
+  lines.push('You are registered for:');
+  for (const c of courses) {
+    lines.push(`  • ${c.title} — ${c.day}s, ${c.time} (${c.location}). Instructor: ${c.instructor}. Fee: $${c.fee}.`);
+  }
+  lines.push('');
+  lines.push(`Total due: $${total.toFixed(2)}`);
+  if (isPaper) {
+    lines.push(`Amount enclosed: $${enclosed.toFixed(2)}`);
+    const diff = enclosed - total;
+    if (diff === 0 && enclosed > 0) lines.push('Balance: PAID IN FULL. Thank you!');
+    else if (diff < 0) lines.push(`Balance remaining: $${Math.abs(diff).toFixed(2)}. Please remit when you have a chance.`);
+    else if (diff > 0) lines.push(`Credit on your account: $${diff.toFixed(2)}.`);
+  }
+  lines.push('');
+  lines.push('If any detail looks wrong, please reply to this message and we\'ll fix it.');
+  lines.push('');
+  lines.push('— The Schola Academy team');
+  return lines.join('\n');
+}
+
+function buildConfirmationSms({
+  confirmation, courses, total, enclosed, isPaper,
+}: {
+  confirmation: string; courses: Course[]; total: number; enclosed: number; isPaper: boolean;
+}): string {
+  const titles = courses.slice(0, 3).map(c => c.title).join(', ');
+  const more = courses.length > 3 ? ` +${courses.length - 3} more` : '';
+  const balance = isPaper
+    ? ` Enclosed $${enclosed.toFixed(0)} of $${total.toFixed(0)}.`
+    : ` Total due $${total.toFixed(0)}.`;
+  return `Schola Academy: you're registered for ${titles}${more}.${balance} Confirmation ${confirmation}. Reply STOP to opt out.`.slice(0, 320);
 }
