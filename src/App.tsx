@@ -12,6 +12,7 @@ import OfferingsManager from './components/OfferingsManager';
 import Reminders from './components/Reminders';
 import Reports from './components/Reports';
 import PaperForm from './components/PaperForm';
+import CheckBatches from './components/CheckBatches';
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ function AdminLayout() {
             <Route path="/posters" element={<Posters />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/batches" element={<CheckBatches />} />
             <Route path="/paper-form" element={<PaperForm />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -104,8 +104,19 @@ export interface RegistrationRecord {
   expectedAmount: number;
   amountEnclosed: number;
   paymentMethod?: 'cash' | 'check' | 'card' | 'none';
+  checkNumber?: string;
+  batchId?: string;
   recordedAt: number;
   confirmationSent: boolean;
+}
+
+export interface CheckBatch {
+  id: string;
+  label: string;
+  preparedBy: string;
+  preparedAt: number;
+  notes?: string;
+  registrationIds: string[];
 }
 
 export const students: Student[] = [

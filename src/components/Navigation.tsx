@@ -14,6 +14,7 @@ import {
   BarChart3,
   FileText,
   Mail,
+  Layers,
 } from 'lucide-react';
 
 interface Props {
@@ -46,6 +47,7 @@ const groups: { heading: string; links: LinkDef[] }[] = [
     heading: 'Reports & Forms',
     links: [
       { to: '/reports',      icon: BarChart3,       label: 'Reports' },
+      { to: '/batches',      icon: Layers,          label: 'Check Batches' },
       { to: '/paper-form',   icon: FileText,        label: 'Mail-in Form' },
     ],
   },
@@ -149,7 +151,7 @@ export default function Navigation({ isOpen, onClose }: Props) {
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/10">
           <p className="text-gray-500 text-xs">© 2026 Paul D Pruitt</p>
-          <p className="text-gray-600 text-xs mt-0.5">v1.2.0</p>
+          <p className="text-gray-600 text-xs mt-0.5">v1.3.0</p>
         </div>
       </aside>
     </>

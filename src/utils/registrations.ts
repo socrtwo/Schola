@@ -22,3 +22,17 @@ export function markConfirmationSent(id: string): void {
   saveJSON(KEY, next);
   window.dispatchEvent(new Event('schola:registrations-updated'));
 }
+
+export function setBatchOnRegistrations(ids: string[], batchId: string | null): void {
+  const all = listRegistrations();
+  const set = new Set(ids);
+  const next = all.map(r => set.has(r.id) ? { ...r, batchId: batchId ?? undefined } : r);
+  saveJSON(KEY, next);
+  window.dispatchEvent(new Event('schola:registrations-updated'));
+}
+
+export function unbatchedPaperRegistrations() {
+  return listRegistrations().filter(
+    r => r.mode === 'paper' && r.amountEnclosed > 0 && !r.batchId,
+  );
+}

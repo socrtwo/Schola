@@ -42,6 +42,7 @@ interface FormData {
   selectedCourses: string[];
   paymentMethod: 'cash' | 'check' | 'card' | 'none';
   amountEnclosed: string; // paper mode only
+  checkNumber: string;    // paper mode, only when method=check
 }
 
 const BLANK: FormData = {
@@ -58,6 +59,7 @@ const BLANK: FormData = {
   selectedCourses: [],
   paymentMethod: 'none',
   amountEnclosed: '',
+  checkNumber: '',
 };
 
 const STEPS: { id: Step; label: string; icon: typeof User }[] = [
@@ -150,6 +152,7 @@ export default function Registration() {
       expectedAmount,
       amountEnclosed: isPaper ? Number(data.amountEnclosed || '0') : 0,
       paymentMethod: isPaper ? data.paymentMethod : 'none',
+      checkNumber: isPaper && data.paymentMethod === 'check' ? (data.checkNumber.trim() || undefined) : undefined,
       confirmationSent: false,
     });
     setRegistrationId(rec.id);
@@ -834,17 +837,36 @@ function ReviewStep({
           </div>
 
           <div>
-            <label htmlFor="enclosed" className="block text-sm font-semibold text-amber-900 mb-2">
-              Amount enclosed ($)
-            </label>
-            <input
-              id="enclosed"
-              type="number" min={0} step="0.01" inputMode="decimal"
-              value={data.amountEnclosed}
-              onChange={e => set('amountEnclosed', e.target.value)}
-              placeholder="0.00"
-              className="w-full h-12 text-lg px-3 bg-white border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-amber-200"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label htmlFor="enclosed" className="block text-sm font-semibold text-amber-900 mb-2">
+                  Amount enclosed ($)
+                </label>
+                <input
+                  id="enclosed"
+                  type="number" min={0} step="0.01" inputMode="decimal"
+                  value={data.amountEnclosed}
+                  onChange={e => set('amountEnclosed', e.target.value)}
+                  placeholder="0.00"
+                  className="w-full h-12 text-lg px-3 bg-white border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-amber-200"
+                />
+              </div>
+              {data.paymentMethod === 'check' && (
+                <div>
+                  <label htmlFor="checkNo" className="block text-sm font-semibold text-amber-900 mb-2">
+                    Check #
+                  </label>
+                  <input
+                    id="checkNo"
+                    type="text" inputMode="numeric"
+                    value={data.checkNumber}
+                    onChange={e => set('checkNumber', e.target.value)}
+                    placeholder="e.g. 1042"
+                    className="w-full h-12 text-lg px-3 bg-white border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-amber-200"
+                  />
+                </div>
+              )}
+            </div>
             <div className="mt-3 flex flex-wrap gap-2 text-sm">
               <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-amber-200">
                 Expected: <strong className="text-gray-900">${totalFee.toFixed(2)}</strong>
