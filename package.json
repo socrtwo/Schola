@@ -91,7 +91,8 @@
         { "target": "rpm", "arch": ["x64"] }
       ],
       "icon": "electron/resources/icons",
-      "category": "Education"
+      "category": "Education",
+      "maintainer": "Paul D Pruitt <socrtwo@s2services.com>"
     }
   }
 }
