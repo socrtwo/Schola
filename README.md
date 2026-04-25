@@ -1,5 +1,10 @@
 # Schola 🎓
 
+<!--PAGES_LINK_BANNER-->
+> 🌐 **Live page:** [https://socrtwo.github.io/Schola/](https://socrtwo.github.io/Schola/)  
+> 📦 **Releases:** [github.com/socrtwo/Schola/releases](https://github.com/socrtwo/Schola/releases)
+<!--/PAGES_LINK_BANNER-->
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Web-brightgreen.svg)
 
