@@ -135,7 +135,8 @@ The workflow in `.github/workflows/build.yml` automatically:
 | Push to `main` | Web PWA + deploys to GitHub Pages |
 | Pull request to `main` | Web PWA (type-check only) |
 | Push to `claude/**` | All platforms (Web, Windows, macOS, Linux, Android, iOS) |
-| Tag `v*.*.*` | All platforms + creates GitHub Release with downloadable assets |
+| Tag `v*` (e.g. `v1.0.0`) | All platforms + creates GitHub Release with downloadable installers attached |
+| Manual `workflow_dispatch` | All platforms + creates a GitHub Release |
 
 ### Creating a release
 

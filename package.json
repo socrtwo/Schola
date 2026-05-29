@@ -6,6 +6,12 @@
     "name": "Paul D Pruitt",
     "email": "socrtwo@s2services.com"
   },
+  "homepage": "https://github.com/socrtwo/Schola",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/socrtwo/Schola.git"
+  },
+  "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {
@@ -25,7 +31,13 @@
     "electron:dev": "npm run build && electron electron/main.cjs",
     "electron:build:win": "npm run build && electron-builder --win",
     "electron:build:mac": "npm run build && electron-builder --mac",
-    "electron:build:linux": "npm run build && electron-builder --linux"
+    "electron:build:linux": "npm run build && electron-builder --linux",
+
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run electron:build:win",
+    "dist:mac": "npm run electron:build:mac",
+    "dist:linux": "npm run electron:build:linux",
+    "dist:all": "npm run build && electron-builder -wml"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
