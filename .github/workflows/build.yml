@@ -39,16 +39,26 @@ jobs:
       - name: Build
         run: npm run build:web
 
-      - name: Package web build as zip
+      - name: Package PWA bundles (Web / ChromeOS / iOS)
         run: |
-          cd dist
-          zip -r ../schola-web.zip .
+          # Schola is a PWA (Capacitor wraps the same web build), so ChromeOS
+          # and iOS ship as installable PWA bundles alongside the plain Web zip.
+          ( cd dist && zip -r ../schola-web.zip . )
+          # ChromeOS: install as a PWA, or sideload the Android APK on ChromeOS.
+          printf 'Schola for ChromeOS\n\nOpen the live app in Chrome and use\n"Install Schola" from the address bar, or sideload the Android APK.\n' > INSTALL-chromeos.txt
+          cp schola-web.zip schola-chromeos.zip && zip -j schola-chromeos.zip INSTALL-chromeos.txt
+          # iOS: install as a PWA via Safari → Share → Add to Home Screen.
+          printf 'Schola for iOS / iPadOS\n\nOpen the live app in Safari, then\nShare -> Add to Home Screen to install.\n' > INSTALL-ios.txt
+          cp schola-web.zip schola-ios.zip && zip -j schola-ios.zip INSTALL-ios.txt
 
-      - name: Upload web artifact
+      - name: Upload PWA bundles (Web / ChromeOS / iOS)
         uses: actions/upload-artifact@v4
         with:
-          name: schola-web
-          path: schola-web.zip
+          name: schola-pwa-bundles
+          path: |
+            schola-web.zip
+            schola-chromeos.zip
+            schola-ios.zip
           retention-days: 30
 
       - name: Deploy to GitHub Pages
