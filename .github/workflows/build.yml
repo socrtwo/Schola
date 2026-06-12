@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (e.g. v1.3.2)"
+        required: false
+        default: ""
 
 env:
   NODE_VERSION: "22"
@@ -285,7 +290,9 @@ jobs:
     runs-on: ubuntu-latest
     # always() so one failed platform build (historically iOS) doesn't kill
     # the whole release — we publish whatever was built successfully.
-    if: always() && startsWith(github.ref, 'refs/tags/v')
+    # Runs on v* tag pushes, or on workflow_dispatch when a `tag` input is
+    # supplied (the release action then creates that tag server-side).
+    if: always() && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.tag != ''))
     needs: [build-web, build-windows, build-macos, build-linux, build-android, build-ios]
     permissions:
       contents: write
@@ -298,9 +305,13 @@ jobs:
           path: artifacts/
 
       - name: Stage release assets
+        env:
+          # On workflow_dispatch the ref is a branch (which can contain
+          # slashes), so prefer the dispatched tag input for naming.
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
-          VER="${GITHUB_REF_NAME#v}"
+          VER="${RELEASE_TAG#v}"
           echo "VER=$VER" >> "$GITHUB_ENV"
           mkdir -p release
 
@@ -382,6 +393,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # On workflow_dispatch this creates the tag server-side at the
+          # dispatched ref (the environment cannot push tags itself).
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           files: release/*
           generate_release_notes: true
           fail_on_unmatched_files: true
