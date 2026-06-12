@@ -283,7 +283,9 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    # always() so one failed platform build (historically iOS) doesn't kill
+    # the whole release — we publish whatever was built successfully.
+    if: always() && startsWith(github.ref, 'refs/tags/v')
     needs: [build-web, build-windows, build-macos, build-linux, build-android, build-ios]
     permissions:
       contents: write
@@ -295,9 +297,91 @@ jobs:
         with:
           path: artifacts/
 
+      - name: Stage release assets
+        run: |
+          set -euo pipefail
+          VER="${GITHUB_REF_NAME#v}"
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          mkdir -p release
+
+          # Desktop installers keep the names electron-builder gave them.
+          for d in artifacts/schola-windows artifacts/schola-macos artifacts/schola-linux; do
+            [ -d "$d" ] || continue
+            find "$d" -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' \
+              -o -name '*.zip' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) \
+              -exec cp {} release/ \;
+          done
+
+          # Android debug APK gets a versioned name.
+          if [ -d artifacts/schola-android ]; then
+            APK="$(find artifacts/schola-android -type f -name '*.apk' | head -n 1 || true)"
+            if [ -n "$APK" ]; then
+              cp "$APK" "release/Schola-android-${VER}.apk"
+            fi
+          fi
+
+          # Web / ChromeOS / iOS bundles are all packaged from the web dist.
+          if [ -d artifacts/schola-web ]; then
+            # Web: the PWA dist as a single zip (not loose files).
+            (cd artifacts/schola-web && zip -qr "$GITHUB_WORKSPACE/release/Schola-web-${VER}.zip" .)
+
+            # ChromeOS: PWA dist + install instructions.
+            rm -rf stage-chromeos
+            cp -r artifacts/schola-web stage-chromeos
+            printf '%s\n' \
+              '# Schola on ChromeOS' \
+              '' \
+              'ChromeOS runs Schola as an installable PWA — no APK needed.' \
+              '' \
+              '## Install (recommended)' \
+              '1. Open https://socrtwo.github.io/Schola/ in Chrome on your Chromebook.' \
+              '2. Click the install icon in the address bar (or Menu -> Install Schola).' \
+              '3. Schola appears in the launcher and works offline after first load.' \
+              '' \
+              '## Run from this bundle' \
+              '1. Unzip into Files -> My files.' \
+              '2. Open index.html in Chrome.' \
+              '' \
+              'Chromebooks with Play Store support can alternatively sideload the' \
+              'Android APK from this same release.' \
+              > stage-chromeos/INSTALL.md
+            (cd stage-chromeos && zip -qr "$GITHUB_WORKSPACE/release/Schola-chromeos-${VER}.zip" .)
+
+            # iOS: PWA dist + install instructions (no signed IPA is produced).
+            rm -rf stage-ios
+            cp -r artifacts/schola-web stage-ios
+            printf '%s\n' \
+              '# Schola on iOS / iPadOS' \
+              '' \
+              'Schola installs on iPhone and iPad as a PWA — no App Store needed.' \
+              '' \
+              '## Install (recommended)' \
+              '1. Open https://socrtwo.github.io/Schola/ in Safari on your device.' \
+              '2. Tap the Share button.' \
+              '3. Tap "Add to Home Screen".' \
+              '4. Schola appears on your home screen as a standalone app.' \
+              '' \
+              '## Native build (developers)' \
+              'A native iOS app can be produced from this repo with Capacitor:' \
+              'run "npm run build:web", then "npx cap add ios" and' \
+              '"npx cap sync ios", and open ios/App/App.xcworkspace in Xcode.' \
+              'Signing and distribution require an Apple Developer account.' \
+              > stage-ios/INSTALL.md
+            (cd stage-ios && zip -qr "$GITHUB_WORKSPACE/release/Schola-ios-${VER}.zip" .)
+          fi
+
+          echo "Release assets:"
+          ls -la release/
+
+          # Never publish an empty release.
+          if [ -z "$(ls -A release/)" ]; then
+            echo "::error::No release assets were produced — refusing to publish an empty release."
+            exit 1
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: release/*
           generate_release_notes: true
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
