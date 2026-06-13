@@ -56,6 +56,10 @@ jobs:
     name: Build Windows (Electron)
     runs-on: windows-latest
     needs: build-web
+    environment: release
+    permissions:
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -74,6 +78,27 @@ jobs:
         run: npm run electron:build:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Azure login (OIDC, no stored secret)
+        if: vars.AZURE_TENANT_ID != ''
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign Windows binaries with Azure Trusted Signing
+        if: vars.AZURE_TENANT_ID != ''
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          endpoint: ${{ vars.TS_ENDPOINT }}
+          trusted-signing-account-name: ${{ vars.TS_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.TS_CERT_PROFILE }}
+          files-folder: release
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
