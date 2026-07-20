@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: 'Schola – Continuing Education',
         short_name: 'Schola',
-        description: 'Administration system for Sampleschool School continuing education programs',
+        description: 'Administration system for continuing education programs',
         theme_color: '#1e3a5f',
         background_color: '#ffffff',
         display: 'standalone',

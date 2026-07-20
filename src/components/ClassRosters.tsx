@@ -1,33 +1,32 @@
 import { useState } from 'react';
 import { CheckSquare, Square, Download } from 'lucide-react';
 import { courses, students } from '../data/sampleData';
+import { downloadCSV } from '../utils/csv';
 
 export default function ClassRosters() {
-  const [selectedCourse, setSelectedCourse] = useState(courses[0].id);
-  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [selectedCourse, setSelectedCourse] = useState(courses[0]?.id ?? '');
+  const [attendance, setAttendance] = useState<Record<number, boolean>>({});
 
-  const course = courses.find(c => c.id === selectedCourse)!;
+  const course = courses.find(c => c.id === selectedCourse);
   const enrolled = students.filter(s => s.enrolledCourses.includes(selectedCourse));
 
-  const toggle = (name: string) =>
-    setAttendance(prev => ({ ...prev, [name]: !prev[name] }));
+  const toggle = (id: number) =>
+    setAttendance(prev => ({ ...prev, [id]: !prev[id] }));
 
-  const presentCount = enrolled.filter(s => attendance[s.name]).length;
+  const presentCount = enrolled.filter(s => attendance[s.id]).length;
+  const allPresent = enrolled.length > 0 && enrolled.every(s => attendance[s.id]);
 
   const exportCSV = () => {
-    const rows = [
+    if (!course) return;
+    downloadCSV(`${course.id}-roster.csv`, [
       ['Name', 'Email', 'Phone', 'Present'],
-      ...enrolled.map(s => [s.name, s.email, s.phone, attendance[s.name] ? 'Yes' : 'No']),
-    ];
-    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${course.id}-roster.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      ...enrolled.map(s => [s.name, s.email, s.phone, attendance[s.id] ? 'Yes' : 'No']),
+    ]);
   };
+
+  if (!course) {
+    return <div className="card py-12 text-center text-gray-400 text-sm">No courses available.</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -38,8 +37,11 @@ export default function ClassRosters() {
 
       {/* Course selector */}
       <div className="card">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
+        <label htmlFor="roster-course" className="block text-sm font-medium text-gray-700 mb-2">
+          Select Course
+        </label>
         <select
+          id="roster-course"
           value={selectedCourse}
           onChange={e => { setSelectedCourse(e.target.value); setAttendance({}); }}
           className="w-full border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -75,10 +77,11 @@ export default function ClassRosters() {
                   <input
                     type="checkbox"
                     className="rounded"
-                    checked={enrolled.length > 0 && enrolled.every(s => attendance[s.name])}
+                    aria-label="Mark all present"
+                    checked={allPresent}
                     onChange={e => {
-                      const next: Record<string, boolean> = {};
-                      enrolled.forEach(s => { next[s.name] = e.target.checked; });
+                      const next: Record<number, boolean> = {};
+                      enrolled.forEach(s => { next[s.id] = e.target.checked; });
                       setAttendance(next);
                     }}
                   />
@@ -90,12 +93,22 @@ export default function ClassRosters() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {enrolled.map(s => {
-                const present = !!attendance[s.name];
+                const present = !!attendance[s.id];
                 return (
                   <tr
                     key={s.id}
-                    onClick={() => toggle(s.name)}
-                    className={`cursor-pointer transition-colors ${present ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                    onClick={() => toggle(s.id)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggle(s.id);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-pressed={present}
+                    aria-label={`Toggle attendance for ${s.name}`}
+                    className={`cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${present ? 'bg-green-50' : 'hover:bg-gray-50'}`}
                   >
                     <td className="table-cell">
                       {present

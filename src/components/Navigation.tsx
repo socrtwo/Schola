@@ -51,7 +51,7 @@ export default function Navigation({ isOpen, onClose }: Props) {
             </div>
             <div>
               <div className="text-white font-bold text-lg leading-none">Schola</div>
-              <div className="text-blue-300 text-xs mt-0.5">Sampleschool School</div>
+              <div className="text-blue-300 text-xs mt-0.5">Continuing Education</div>
             </div>
           </div>
           <button

@@ -39,8 +39,9 @@ export default function StudentDirectory() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
-            type="text"
+            type="search"
             placeholder="Search by name, email, or city…"
+            aria-label="Search students"
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -51,6 +52,7 @@ export default function StudentDirectory() {
           <select
             value={genderFilter}
             onChange={e => setGenderFilter(e.target.value)}
+            aria-label="Filter by gender"
             className="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="All">All genders</option>
@@ -78,7 +80,17 @@ export default function StudentDirectory() {
                   <tr
                     key={s.id}
                     onClick={() => setSelectedStudent(s.id === selectedStudent ? null : s.id)}
-                    className={`cursor-pointer transition-colors ${s.id === selectedStudent ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedStudent(s.id === selectedStudent ? null : s.id);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-expanded={s.id === selectedStudent}
+                    aria-label={`View details for ${s.name}`}
+                    className={`cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${s.id === selectedStudent ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                   >
                     <td className="table-cell">
                       <div className="flex items-center gap-3">
