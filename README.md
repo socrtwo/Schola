@@ -66,6 +66,14 @@ Schola is a comprehensive database and registration system designed for continui
 4. Begin registering students
 5. Generate attendance and financial reports as needed
 
+## Sample Data 🔒
+
+The application ships with **fully synthetic** demo data (`src/data/sampleData.ts`)
+and example import files (`samples/`). Every name, address, email, and phone
+number is randomly generated fiction — no real personal information is stored in
+this repository. Phone numbers use the reserved 555 prefix and email addresses
+use reserved `example.com` domains.
+
 ## License 📄
 
 MIT License - See [LICENSE](LICENSE) for details

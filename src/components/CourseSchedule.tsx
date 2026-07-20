@@ -36,15 +36,17 @@ export default function CourseSchedule() {
           <p className="text-gray-500 text-sm mt-1">Fall 2025 – {courses.length} courses offered</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" role="group" aria-label="Schedule view">
           <button
             onClick={() => setView('list')}
+            aria-pressed={view === 'list'}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${view === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'}`}
           >
             List
           </button>
           <button
             onClick={() => setView('grid')}
+            aria-pressed={view === 'grid'}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${view === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'}`}
           >
             Grid
@@ -57,6 +59,7 @@ export default function CourseSchedule() {
         <select
           value={filterDay}
           onChange={e => setFilterDay(e.target.value)}
+          aria-label="Filter by day"
           className="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="All">All days</option>
@@ -65,6 +68,7 @@ export default function CourseSchedule() {
         <select
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}
+          aria-label="Filter by category"
           className="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="All">All categories</option>

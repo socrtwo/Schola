@@ -37,14 +37,14 @@ export default function Dashboard() {
     [],
   );
 
-  const fillRate = Math.round((totalEnrolled / totalCapacity) * 100);
+  const fillRate = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0;
 
   return (
     <div className="space-y-6">
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">Sampleschool School – Fall 2025 Overview</p>
+        <p className="text-gray-500 text-sm mt-1">Fall 2025 Overview</p>
       </div>
 
       {/* Stat cards */}
@@ -168,7 +168,7 @@ export default function Dashboard() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {transactions.slice(0, 6).map((t, i) => (
-                <tr key={i} className="hover:bg-gray-50">
+                <tr key={`${t.date}-${t.studentName}-${i}`} className="hover:bg-gray-50">
                   <td className="table-cell pl-0 text-gray-500">{t.date}</td>
                   <td className="table-cell font-medium">{t.studentName}</td>
                   <td className="table-cell hidden sm:table-cell">

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Search, Download, TrendingUp } from 'lucide-react';
 import { transactions } from '../data/sampleData';
+import { downloadCSV } from '../utils/csv';
 
 const categoryColors: Record<string, string> = {
   'Course Fee': 'bg-blue-100 text-blue-700',
@@ -46,18 +47,10 @@ export default function Transactions() {
   }, [filtered]);
 
   const exportCSV = () => {
-    const rows = [
+    downloadCSV('schola-transactions.csv', [
       ['Date', 'Student', 'Description', 'Category', 'Payment Method', 'Amount'],
       ...filtered.map(t => [t.date, t.studentName, t.description, t.category, t.paymentMethod, t.amount.toFixed(2)]),
-    ];
-    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'schola-transactions.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    ]);
   };
 
   return (
@@ -78,7 +71,7 @@ export default function Transactions() {
         <div className="card col-span-2 lg:col-span-1">
           <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Revenue</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">
-            ${filtered.reduce((s, t) => s + t.amount, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </p>
         </div>
         {byCategory.slice(0, 3).map(([cat, amt]) => (
@@ -94,8 +87,9 @@ export default function Transactions() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
-            type="text"
+            type="search"
             placeholder="Search by student or description…"
+            aria-label="Search transactions"
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -104,6 +98,7 @@ export default function Transactions() {
         <select
           value={categoryFilter}
           onChange={e => setCategoryFilter(e.target.value)}
+          aria-label="Filter by category"
           className="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="All">All categories</option>
@@ -111,6 +106,7 @@ export default function Transactions() {
         </select>
         <button
           onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          aria-label={`Sort by date, currently ${sortDir === 'desc' ? 'newest first' : 'oldest first'}`}
           className="btn-secondary flex items-center gap-2 text-sm"
         >
           <TrendingUp className="w-4 h-4" />
@@ -134,7 +130,7 @@ export default function Transactions() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((t, i) => (
-                <tr key={i} className="hover:bg-gray-50 transition-colors">
+                <tr key={`${t.date}-${t.studentName}-${i}`} className="hover:bg-gray-50 transition-colors">
                   <td className="table-cell text-gray-500 whitespace-nowrap">{t.date}</td>
                   <td className="table-cell font-medium">{t.studentName}</td>
                   <td className="table-cell hidden md:table-cell text-gray-500 max-w-[200px] truncate">{t.description}</td>
