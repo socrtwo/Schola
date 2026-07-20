@@ -346,6 +346,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version || github.ref_name }}
-          files: artifacts/**/*
+          # Only packaged installers/bundles — NOT artifacts/**/*: the
+          # schola-web artifact is the raw dist/ tree (hundreds of loose
+          # files, duplicate names) and globbing it broke asset metadata
+          # updates, leaving v1.3.4 stuck as an unpublished draft.
+          files: |
+            artifacts/schola-pwa-bundles/*.zip
+            artifacts/schola-windows/*
+            artifacts/schola-macos/*
+            artifacts/schola-linux/*
+            artifacts/schola-android/*
           generate_release_notes: true
           fail_on_unmatched_files: false
