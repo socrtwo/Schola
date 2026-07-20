@@ -35,6 +35,24 @@ jobs:
       - name: Build
         run: npm run build:web
 
+      - name: Package PWA install bundles (Web / ChromeOS / iOS)
+        run: |
+          mkdir -p bundles
+          ( cd dist && zip -qr ../bundles/schola-web.zip . )
+          printf 'Schola for ChromeOS\n\nOpen the live app in Chrome and choose "Install Schola" from the\naddress bar, or sideload the Android APK from this release.\n' > INSTALL-chromeos.txt
+          cp bundles/schola-web.zip bundles/schola-chromeos.zip
+          zip -qj bundles/schola-chromeos.zip INSTALL-chromeos.txt
+          printf 'Schola for iOS / iPadOS\n\nOpen the live app in Safari, then Share -> Add to Home Screen\nto install.\n' > INSTALL-ios.txt
+          cp bundles/schola-web.zip bundles/schola-ios-pwa.zip
+          zip -qj bundles/schola-ios-pwa.zip INSTALL-ios.txt
+
+      - name: Upload PWA install bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: schola-pwa-bundles
+          path: bundles/*.zip
+          retention-days: 30
+
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
