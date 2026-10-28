@@ -16,9 +16,20 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+# Site layout (https://socrtwo.github.io/Schola/):
+#   /           newest release build of the app (falls back to the main build)
+#   /latest/    same as /
+#   /main/      app built from the main branch on every push
+#   /vX.Y.Z/    app build attached to each GitHub Release (schola-web.zip)
+#   /about/     README-driven landing page (web/index.html)
+#   /versions.html  index of the above
 env:
   WEB_DIR: web
-  ASSET_NAME: ""
+  ASSET_NAME: schola-web.zip
+  # Web builds before this tag used absolute (history) routing and render a
+  # blank page under a sub-path such as /Schola/, so they are not deployed.
+  MIN_RELEASE_TAG: v1.3.5
+  NODE_VERSION: "22"
 
 jobs:
   deploy:
@@ -28,6 +39,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
     - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: npm
+
+    - name: Build app from main
+      run: |
+        npm ci
+        npm run build:web
 
     - name: Assemble versioned site
       env:
@@ -39,8 +60,9 @@ jobs:
         if [ ! -d "$WEB_DIR" ]; then
           echo "WEB_DIR '$WEB_DIR' not found" >&2; exit 1
         fi
-        mkdir -p public/main
-        cp -r "$WEB_DIR"/. public/main/
+        mkdir -p public/main public/about
+        cp -r dist/. public/main/
+        cp -r "$WEB_DIR"/. public/about/
 
         newest_dir=""; newest_tag=""
         if [ -n "${ASSET_NAME:-}" ]; then
@@ -53,6 +75,8 @@ jobs:
             tag=$(printf '%s' "$line" | cut -f1)
             url=$(printf '%s' "$line" | cut -f2)
             [ -z "$tag" ] || [ -z "$url" ] && continue
+            # skip tags older than MIN_RELEASE_TAG (semver order)
+            [ "$(printf '%s\n%s\n' "$MIN_RELEASE_TAG" "$tag" | sort -V | head -n1)" = "$MIN_RELEASE_TAG" ] || continue
             dest="public/$tag"
             mkdir -p "$dest"
             if curl -fsSL "$url" -o "/tmp/web-$tag.zip"; then
@@ -68,8 +92,8 @@ jobs:
           cp -r "$newest_dir"/. public/
           mkdir -p public/latest && cp -r "$newest_dir"/. public/latest/
         else
-          cp -r "$WEB_DIR"/. public/
-          mkdir -p public/latest && cp -r "$WEB_DIR"/. public/latest/
+          cp -r dist/. public/
+          mkdir -p public/latest && cp -r dist/. public/latest/
         fi
 
         current_label="${newest_tag:-main}"
@@ -84,7 +108,7 @@ jobs:
           printf 'a:hover{border-color:#7c3aed}h1{background:linear-gradient(90deg,#ff2e93,#22d3ee);'
           printf '%s' '-webkit-background-clip:text;-webkit-text-fill-color:transparent}</style></head><body>'
           printf '<h1>All Versions</h1>'
-          printf '<a href="./">Latest (%s)</a><a href="./main/">main</a>' "$current_label"
+          printf '<a href="./">Latest (%s)</a><a href="./main/">main</a><a href="./about/">About</a>' "$current_label"
         } > public/versions.html
         for dir in public/v*/; do
           [ -d "$dir" ] || continue

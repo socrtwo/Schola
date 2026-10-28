@@ -9,18 +9,27 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
+        id: './',
         name: 'Schola – Continuing Education',
         short_name: 'Schola',
         description: 'Administration system for continuing education programs',
         theme_color: '#1e3a5f',
         background_color: '#ffffff',
         display: 'standalone',
-        orientation: 'portrait-primary',
+        orientation: 'any',
+        categories: ['education', 'productivity'],
+        lang: 'en-US',
+        shortcuts: [
+          { name: 'Dashboard', url: './#/dashboard', description: 'Overview and statistics' },
+          { name: 'Students', url: './#/students', description: 'View student directory' },
+          { name: 'Schedule', url: './#/schedule', description: 'View course schedule' },
+        ],
         icons: [
           {
             src: 'icons/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: 'icons/pwa-512x512.png',
@@ -32,6 +41,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Routing is hash-based, so no SPA navigation fallback is needed. Leaving
+        // the default ('index.html') on would make the service worker at the
+        // Pages site root hijack navigations to sibling deployments such as
+        // /Schola/main/ and /Schola/v1.3.4/ and serve the root build instead.
+        navigateFallback: null,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

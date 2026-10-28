@@ -30,6 +30,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      - name: Stamp package version from the release tag
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.inputs.version, 'v')
+        shell: bash
+        run: |
+          v="${{ github.event.inputs.version || github.ref_name }}"
+          npm version --no-git-tag-version "${v#v}"
+
       - name: Install dependencies
         run: npm ci
 
@@ -64,13 +71,6 @@ jobs:
           path: dist/
           retention-days: 30
 
-      - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist
-
   # ─────────────────────────────────────────────
   # 2. Electron – Windows
   # ─────────────────────────────────────────────
@@ -89,6 +89,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
+      - name: Stamp package version from the release tag
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.inputs.version, 'v')
+        shell: bash
+        run: |
+          v="${{ github.event.inputs.version || github.ref_name }}"
+          npm version --no-git-tag-version "${v#v}"
 
       - name: Install dependencies
         run: npm ci
@@ -146,6 +153,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      - name: Stamp package version from the release tag
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.inputs.version, 'v')
+        shell: bash
+        run: |
+          v="${{ github.event.inputs.version || github.ref_name }}"
+          npm version --no-git-tag-version "${v#v}"
+
       - name: Install dependencies
         run: npm ci
 
@@ -186,6 +200,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
+      - name: Stamp package version from the release tag
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.inputs.version, 'v')
+        shell: bash
+        run: |
+          v="${{ github.event.inputs.version || github.ref_name }}"
+          npm version --no-git-tag-version "${v#v}"
 
       - name: Install dependencies
         run: npm ci
@@ -231,6 +252,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Stamp package version from the release tag
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.inputs.version, 'v')
+        shell: bash
+        run: |
+          v="${{ github.event.inputs.version || github.ref_name }}"
+          npm version --no-git-tag-version "${v#v}"
+
       - name: Install dependencies
         run: npm ci
 
@@ -250,11 +278,17 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug
 
+      - name: Name the APK by version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/app-debug.apk "out/Schola-$v-android-debug.apk"
+
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: schola-android
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: out/*.apk
           retention-days: 30
 
   # ─────────────────────────────────────────────
@@ -271,6 +305,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+
+      - name: Stamp package version from the release tag
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.inputs.version, 'v')
+        shell: bash
+        run: |
+          v="${{ github.event.inputs.version || github.ref_name }}"
+          npm version --no-git-tag-version "${v#v}"
 
       - name: Install dependencies
         run: npm ci
@@ -315,13 +356,20 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
-      - name: Upload iOS build log
-        if: always()
+      - name: Package simulator app bundle
+        run: |
+          v=$(node -p "require('./package.json').version")
+          app=$(find ~/Library/Developer/Xcode/DerivedData -type d -path "*/Build/Products/Debug-iphonesimulator/App.app" | head -n 1)
+          test -n "$app" || { echo "App.app not found" >&2; exit 1; }
+          mkdir -p out
+          ditto -c -k --keepParent "$app" "out/Schola-$v-ios-simulator.zip"
+          ls -l out
+
+      - name: Upload iOS simulator build
         uses: actions/upload-artifact@v4
         with:
-          name: schola-ios-build
-          path: ~/Library/Developer/Xcode/DerivedData/**/Build/Products/**/*.app
-          if-no-files-found: ignore
+          name: schola-ios
+          path: out/*.zip
           retention-days: 30
 
   # ─────────────────────────────────────────────
@@ -334,6 +382,7 @@ jobs:
     needs: [build-web, build-windows, build-macos, build-linux, build-android, build-ios]
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -356,5 +405,11 @@ jobs:
             artifacts/schola-macos/*
             artifacts/schola-linux/*
             artifacts/schola-android/*
+            artifacts/schola-ios/*
           generate_release_notes: true
           fail_on_unmatched_files: false
+
+      - name: Redeploy GitHub Pages with the new release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages.yml --ref main
